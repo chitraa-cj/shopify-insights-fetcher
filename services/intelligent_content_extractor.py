@@ -17,7 +17,7 @@ from services.interfaces import IPolicyExtractor, IFAQExtractor, IAIValidator
 
 logger = logging.getLogger(__name__)
 
-class IntelligentPolicyExtractor(BaseExtractor, IPolicyExtractor):
+class IntelligentPolicyExtractor(BaseExtractor):
     """
     Intelligent policy extractor that uses AI reasoning to discover and extract
     policy content from various website structures.
@@ -26,6 +26,16 @@ class IntelligentPolicyExtractor(BaseExtractor, IPolicyExtractor):
     def __init__(self, network_handler: NetworkHandler, ai_validator: Optional[IAIValidator] = None):
         super().__init__(network_handler)
         self.ai_validator = ai_validator
+        self.policy_keywords = [
+            'privacy policy', 'terms of service', 'refund policy', 'return policy',
+            'shipping policy', 'cookie policy', 'data protection', 'legal',
+            'terms and conditions', 'privacy notice'
+        ]
+    
+    def extract(self, url: str, **kwargs) -> OperationResult:
+        """Extract method to satisfy BaseExtractor interface"""
+        html_content = kwargs.get('html_content', '')
+        return self.extract_policies(url, html_content)
         self.policy_keywords = {
             'privacy': ['privacy', 'policy', 'data', 'protection', 'gdpr'],
             'terms': ['terms', 'service', 'conditions', 'agreement', 'legal'],
@@ -341,7 +351,7 @@ class IntelligentPolicyExtractor(BaseExtractor, IPolicyExtractor):
             self.logger.error(f"AI content query failed: {e}")
             return None
 
-class IntelligentFAQExtractor(BaseExtractor, IFAQExtractor):
+class IntelligentFAQExtractor(BaseExtractor):
     """
     Intelligent FAQ extractor that can navigate complex FAQ structures
     including expandable sections, categorized FAQs, and help centers.
@@ -350,6 +360,16 @@ class IntelligentFAQExtractor(BaseExtractor, IFAQExtractor):
     def __init__(self, network_handler: NetworkHandler, ai_validator: Optional[IAIValidator] = None):
         super().__init__(network_handler)
         self.ai_validator = ai_validator
+        self.faq_keywords = [
+            'faq', 'frequently asked questions', 'help', 'support',
+            'questions', 'answers', 'how to', 'guide', 'tutorial',
+            'customer service', 'help center'
+        ]
+    
+    def extract(self, url: str, **kwargs) -> OperationResult:
+        """Extract method to satisfy BaseExtractor interface"""
+        html_content = kwargs.get('html_content', '')
+        return self.extract_faqs(url, html_content)
         self.faq_keywords = ['faq', 'help', 'support', 'questions', 'answers', 'knowledge']
     
     async def extract_faqs(self, url: str, html_content: str) -> OperationResult:

@@ -69,6 +69,11 @@ class CurrencyService:
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
             
+            # Check domain-based currency detection first (more reliable)
+            domain_currency = self._detect_currency_by_domain(url)
+            if domain_currency:
+                return domain_currency
+            
             # Check meta tags for currency
             meta_currency = soup.find('meta', {'name': 'currency'})
             if meta_currency and meta_currency.get('content'):
@@ -77,24 +82,31 @@ class CurrencyService:
                     symbol = self._get_symbol_for_code(currency_code)
                     return currency_code, symbol
             
-            # Check for currency in price elements
+            # Enhanced currency detection in text content
+            text_content = html_content.lower()
+            
+            # Look for specific currency patterns with priority
+            currency_patterns = [
+                ('INR', '₹', ['inr', '₹', 'rupee', 'rs.', 'rs ', 'indian rupee', '&#8377;']),
+                ('GBP', '£', ['gbp', '£', 'pound', 'british pound', '&#163;']),
+                ('EUR', '€', ['eur', '€', 'euro', '&#8364;']),
+                ('CAD', 'C$', ['cad', 'canadian dollar', 'ca$', 'c$']),
+                ('AUD', 'A$', ['aud', 'australian dollar', 'au$', 'a$']),
+                ('USD', '$', ['usd', '$', 'dollar', 'us dollar'])
+            ]
+            
+            for code, symbol, patterns in currency_patterns:
+                if any(pattern in text_content for pattern in patterns):
+                    logger.info(f"Detected currency from HTML for {url}: {code} ({symbol})")
+                    return code, symbol
+            
+            # Check for currency in price elements as fallback
             price_elements = soup.find_all(['span', 'div', 'p'], class_=re.compile(r'price|cost|amount'))
             for element in price_elements[:10]:  # Check first 10 price elements
                 text = element.get_text()
                 for symbol, code in self.currency_symbols.items():
                     if symbol in text:
                         return code, symbol
-            
-            # Check domain-based currency detection
-            domain_currency = self._detect_currency_by_domain(url)
-            if domain_currency:
-                return domain_currency
-            
-            # Look for currency in general text content
-            text_content = soup.get_text()[:2000]  # First 2000 chars
-            for symbol, code in self.currency_symbols.items():
-                if symbol in text_content:
-                    return code, symbol
             
         except Exception as e:
             logger.error(f"Error detecting currency from HTML: {e}")

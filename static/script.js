@@ -165,41 +165,105 @@ class ShopifyInsightsFetcher {
 
         // Hero Products (Products from the home page)
         if (data.hero_products && data.hero_products.length > 0) {
+            const heroProductsId = 'heroProducts_' + Date.now();
+            const showMoreBtn = 'showMoreHero_' + Date.now();
+            const additionalProductsId = 'additionalHero_' + Date.now();
+            
             html += `
                 <div class="mb-4">
                     <div class="d-flex align-items-center mb-3">
                         <h6 class="mb-0"><i class="fas fa-star text-warning me-2"></i>Hero Products</h6>
                         <span class="badge bg-warning text-dark ms-2">Featured on Homepage</span>
+                        <span class="badge bg-primary ms-2">${data.hero_products.length} total</span>
                     </div>
-                    <div class="row">
+                    <div class="row" id="${heroProductsId}">
                         ${data.hero_products.slice(0, 6).map(product => this.createProductCard(product)).join('')}
                     </div>
                     ${data.hero_products.length > 6 ? `
+                        <div class="row d-none" id="${additionalProductsId}">
+                            ${data.hero_products.slice(6).map(product => this.createProductCard(product)).join('')}
+                        </div>
                         <div class="text-center mt-3">
-                            <span class="badge bg-warning text-dark">+${data.hero_products.length - 6} more hero products available</span>
+                            <button class="btn btn-outline-warning btn-sm" id="${showMoreBtn}">
+                                <i class="fas fa-chevron-down me-1"></i>Show ${data.hero_products.length - 6} More Hero Products
+                            </button>
                         </div>
                     ` : ''}
                 </div>
             `;
+            
+            // Add event listener for expandable hero products
+            setTimeout(() => {
+                const showMoreButton = document.getElementById(showMoreBtn);
+                const additionalProducts = document.getElementById(additionalProductsId);
+                
+                if (showMoreButton && additionalProducts) {
+                    let isExpanded = false;
+                    showMoreButton.addEventListener('click', () => {
+                        if (isExpanded) {
+                            additionalProducts.classList.add('d-none');
+                            showMoreButton.innerHTML = `<i class="fas fa-chevron-down me-1"></i>Show ${data.hero_products.length - 6} More Hero Products`;
+                            isExpanded = false;
+                        } else {
+                            additionalProducts.classList.remove('d-none');
+                            showMoreButton.innerHTML = `<i class="fas fa-chevron-up me-1"></i>Show Less Hero Products`;
+                            isExpanded = true;
+                        }
+                    });
+                }
+            }, 100);
+        }
         }
 
         // Sample from product catalog
         if (data.product_catalog && data.product_catalog.length > 0) {
+            const catalogProductsId = 'catalogProducts_' + Date.now();
+            const showMoreCatalogBtn = 'showMoreCatalog_' + Date.now();
+            const additionalCatalogId = 'additionalCatalog_' + Date.now();
+            
             html += `
                 <div class="section-divider"></div>
                 <div class="d-flex align-items-center mb-3">
                     <h6 class="mb-0"><i class="fas fa-box me-2"></i>Product Catalog</h6>
                     <span class="badge bg-secondary ms-2">Sample from Full Catalog</span>
+                    <span class="badge bg-info ms-2">${data.product_catalog.length} total</span>
                 </div>
-                <div class="row">
+                <div class="row" id="${catalogProductsId}">
                     ${data.product_catalog.slice(0, 8).map(product => this.createProductCard(product)).join('')}
                 </div>
                 ${data.product_catalog.length > 8 ? `
+                    <div class="row d-none" id="${additionalCatalogId}">
+                        ${data.product_catalog.slice(8).map(product => this.createProductCard(product)).join('')}
+                    </div>
                     <div class="text-center mt-3">
-                        <span class="badge bg-secondary">+${data.product_catalog.length - 8} more products available in full dataset</span>
+                        <button class="btn btn-outline-secondary btn-sm" id="${showMoreCatalogBtn}">
+                            <i class="fas fa-chevron-down me-1"></i>Show ${data.product_catalog.length - 8} More Products
+                        </button>
                     </div>
                 ` : ''}
             `;
+            
+            // Add event listener for expandable catalog products
+            setTimeout(() => {
+                const showMoreButton = document.getElementById(showMoreCatalogBtn);
+                const additionalProducts = document.getElementById(additionalCatalogId);
+                
+                if (showMoreButton && additionalProducts) {
+                    let isExpanded = false;
+                    showMoreButton.addEventListener('click', () => {
+                        if (isExpanded) {
+                            additionalProducts.classList.add('d-none');
+                            showMoreButton.innerHTML = `<i class="fas fa-chevron-down me-1"></i>Show ${data.product_catalog.length - 8} More Products`;
+                            isExpanded = false;
+                        } else {
+                            additionalProducts.classList.remove('d-none');
+                            showMoreButton.innerHTML = `<i class="fas fa-chevron-up me-1"></i>Show Less Products`;
+                            isExpanded = true;
+                        }
+                    });
+                }
+            }, 100);
+        }
         }
 
         // If no products found
