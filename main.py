@@ -111,8 +111,48 @@ async def get_brand_details(store_url: str):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Basic health check endpoint"""
     return {"status": "healthy", "service": "Shopify Insights Fetcher"}
+
+@app.get("/health/comprehensive")
+async def comprehensive_health_check():
+    """Comprehensive health check with all dependencies"""
+    try:
+        from services.health_checker import SystemHealthChecker
+        
+        health_checker = SystemHealthChecker()
+        await health_checker.initialize()
+        
+        result = await health_checker.check_health()
+        await health_checker.cleanup()
+        
+        if result.is_success:
+            return result.data
+        else:
+            raise HTTPException(status_code=500, detail=f"Health check failed: {result.error_message}")
+    
+    except Exception as e:
+        logger.error(f"Comprehensive health check failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Health check error: {str(e)}")
+
+@app.get("/metrics")
+async def get_system_metrics():
+    """Get system performance metrics"""
+    try:
+        from services.health_checker import SystemHealthChecker
+        
+        health_checker = SystemHealthChecker()
+        summary = health_checker.get_health_summary()
+        
+        return {
+            "metrics": summary,
+            "timestamp": time.time(),
+            "uptime": "Not implemented yet"  # Could add process start time tracking
+        }
+    
+    except Exception as e:
+        logger.error(f"Metrics endpoint failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Metrics error: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

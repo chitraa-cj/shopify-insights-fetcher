@@ -12,18 +12,29 @@ Latest Request: Fix FAQ extraction to avoid navigation menus, add competitor ana
 
 ## Recent Enhancements (Latest)
 
-- ✅ **Automatic Currency Detection & Conversion**: Intelligent currency detection from HTML content with automatic price conversion to USD
-- ✅ **Enhanced Product Model**: Added currency fields (original_price, currency, currency_symbol, price_usd, formatted_price) 
-- ✅ **Improved FAQ Extraction**: AI now completely filters out navigation menus, properly targets FAQ sections, and fetches content from dedicated FAQ pages
-- ✅ **Enhanced Policy Content Extraction**: Fetches actual policy content from policy URLs rather than just links
-- ✅ **Better HTML Content Analysis**: Removes navigation elements before AI analysis for cleaner, more accurate content extraction
-- ✅ **Competitor Analysis Feature**: Automatically finds and analyzes similar Shopify stores with pricing, product count, and market positioning
-- ✅ **PostgreSQL Database Persistence**: All extracted data is now saved to database with full relationship structure
-- ✅ **Database Viewing Endpoints**: Added `/database/brands` and `/database/brand/{url}` endpoints for stored data access
+- ✅ **SOLID Design Principles Implementation**: Complete refactor using object-oriented design patterns
+- ✅ **Comprehensive Error Handling**: Circuit breakers, retry mechanisms, and graceful degradation
+- ✅ **Interface Segregation**: Separate interfaces for each extraction capability
+- ✅ **Dependency Injection**: Factory pattern for service creation with proper dependency management  
+- ✅ **Optional Gemini API Key**: Application works fully without AI features when key unavailable
+- ✅ **Service Registry Pattern**: Centralized service management with proper lifecycle handling
+- ✅ **Parallel Extraction**: Concurrent operations with proper error isolation
+- ✅ **Metrics & Monitoring**: Built-in operation tracking and performance metrics
+- ✅ **Health Checks**: Comprehensive service health monitoring and dependency validation
+- ✅ **Rate Limiting**: Intelligent request throttling to prevent service overload
+- ✅ **URL Validation**: Robust URL parsing and normalization with edge case handling
 
 ## System Architecture
 
-The application follows a modular service-oriented architecture built with FastAPI, implementing clean separation of concerns and SOLID design principles.
+The application follows SOLID design principles with a comprehensive object-oriented architecture:
+
+### Design Patterns Implemented:
+- **Factory Pattern**: Service and extractor creation with dependency injection
+- **Adapter Pattern**: Backward compatibility with legacy API
+- **Observer Pattern**: Metrics collection and monitoring
+- **Circuit Breaker Pattern**: Prevents cascading failures
+- **Registry Pattern**: Centralized service management
+- **Strategy Pattern**: Multiple extraction strategies with fallbacks
 
 ### Core Architecture Components:
 

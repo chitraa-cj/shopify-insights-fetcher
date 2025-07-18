@@ -1,0 +1,39 @@
+{
+  "summary": {
+    "total_tests": 3,
+    "passed": 1,
+    "failed": 2,
+    "success_rate": 33.33333333333333,
+    "total_time": 44.00362992286682,
+    "average_response_time": 13.588857253392538
+  },
+  "results": [
+    {
+      "name": "Invalid URL - Malformed",
+      "url": "not-a-valid-url",
+      "passed": false,
+      "expected": "Status 401",
+      "actual": "Status 422",
+      "response_time": 0.017435073852539062,
+      "error_details": "Status code mismatch. Response: {'detail': [{'type': 'url_parsing', 'loc': ['body', 'website_url'], 'msg': 'Input should be a valid URL, relative URL without a base', 'input': 'not-a-valid-url', 'ctx': {'error': 'relative URL without a base'}}]}"
+    },
+    {
+      "name": "Invalid URL - Non-existent domain",
+      "url": "https://this-domain-does-not-exist-12345.com",
+      "passed": true,
+      "expected": "Status 401",
+      "actual": "Status 401 with correct error: Website not found or unreachable",
+      "response_time": 0.06832528114318848,
+      "error_details": ""
+    },
+    {
+      "name": "Valid Shopify Store",
+      "url": "https://memy.co.in",
+      "passed": false,
+      "expected": "",
+      "actual": "Request timeout",
+      "response_time": 40.680811405181885,
+      "error_details": "Unexpected timeout"
+    }
+  ]
+}
