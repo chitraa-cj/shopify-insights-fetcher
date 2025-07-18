@@ -147,7 +147,7 @@ class CompetitorAnalyzer:
         return unique_urls
     
     async def _search_for_shopify_stores(self, query: str, exclude_url: str) -> List[str]:
-        """Tokenless: Scrape Agno (or Brave) Search for Shopify stores. Always returns a list."""
+        """Tokenless: Scrape Brave Search for Shopify stores. Always returns a list."""
         import traceback
         try:
             import requests
@@ -159,29 +159,13 @@ class CompetitorAnalyzer:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
             }
-            # Try Agno search first
-            search_url = f"https://agno.ai/search?q={query.replace(' ', '+')}+shopify"
+            search_url = f"https://search.brave.com/search?q={query.replace(' ', '+')}+shopify"
             time.sleep(random.uniform(1.5, 3.5))
             resp = requests.get(search_url, headers=headers, timeout=10)
             time.sleep(random.uniform(1.0, 2.0))
             soup = BeautifulSoup(resp.text, 'html.parser')
             competitor_urls = []
             exclude_domain = urlparse(exclude_url).netloc
-            for a in soup.select('a.result-link'):
-                url = a.get('href')
-                domain = urlparse(url).netloc
-                if domain != exclude_domain:
-                    if ".myshopify.com" in url or await self._is_shopify_store(url):
-                        if url not in competitor_urls:
-                            competitor_urls.append(url)
-                            if len(competitor_urls) >= 5:
-                                break
-            if competitor_urls:
-                return competitor_urls
-            # Fallback to Brave Search if Agno fails or returns nothing
-            search_url = f"https://search.brave.com/search?q={query.replace(' ', '+')}+shopify"
-            resp = requests.get(search_url, headers=headers, timeout=10)
-            soup = BeautifulSoup(resp.text, 'html.parser')
             for a in soup.select('a.result-header'):
                 url = a.get('href')
                 domain = urlparse(url).netloc
@@ -194,14 +178,11 @@ class CompetitorAnalyzer:
             if competitor_urls:
                 return competitor_urls
         except Exception as e:
-            logger.warning(f"Error scraping Agno/Brave search: {e}")
+            logger.warning(f"Error scraping Brave search: {e}")
             logger.warning(traceback.format_exc())
-        logger.warning('Agno/Brave scraping failed. Falling back to demo competitors.')
+        logger.warning('Brave scraping failed. Falling back to demo competitors.')
         return [
-            "https://www.hairoriginals.com",
-            "https://www.luxy-hair.com", 
-            "https://www.bombay-hair.com",
-            "https://www.perfectlocks.com"
+            ""
         ]
     
     async def _find_domain_similar_sites(self, url: str) -> List[str]:
