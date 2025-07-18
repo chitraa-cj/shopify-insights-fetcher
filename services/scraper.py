@@ -137,9 +137,9 @@ class ShopifyScraperService:
                 insights.detected_currency = currency
                 insights.currency_symbol = currency_symbol
             
-            # Extract hero products from homepage
-            insights.hero_products = await self.product_scraper.get_hero_products(url)
-            
+            # Extract hero products from homepage, passing detected currency
+            insights.hero_products = await self.product_scraper.get_hero_products(url, currency, currency_symbol)
+        
         except Exception as e:
             logger.error(f"Error extracting products: {e}")
             insights.errors.append(f"Product extraction error: {str(e)}")

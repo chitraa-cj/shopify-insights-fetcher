@@ -91,7 +91,7 @@ class ProductScraperService:
         products, _, _ = await self.get_product_catalog_with_currency(base_url)
         return products
     
-    async def get_hero_products(self, base_url: str) -> List[Product]:
+    async def get_hero_products(self, base_url: str, detected_currency=None, currency_symbol=None) -> List[Product]:
         """
         Extract hero products from the homepage
         
@@ -130,7 +130,7 @@ class ProductScraperService:
             # Limit to first 10 hero products to avoid overloading
             for url in list(product_urls)[:10]:
                 try:
-                    product = await self._get_product_from_url(url, base_url)
+                    product = await self._get_product_from_url(url, base_url, detected_currency, currency_symbol)
                     if product:
                         hero_products.append(product)
                     await asyncio.sleep(0.1)  # Be respectful
@@ -145,14 +145,16 @@ class ProductScraperService:
             logger.error(f"Error fetching hero products: {e}")
             return []
     
-    async def _get_product_from_url(self, product_url: str, base_url: str) -> Product:
+    async def _get_product_from_url(self, product_url: str, base_url: str, detected_currency=None, currency_symbol=None) -> Product:
         """
         Get product information from a product page URL
         
         Args:
             product_url: The full URL to the product page
             base_url: The base URL of the store
-            
+            detected_currency: Detected currency code (e.g., 'INR')
+            currency_symbol: Detected currency symbol (e.g., '₹')
+        
         Returns:
             Product: Product information or None if failed
         """
@@ -165,7 +167,7 @@ class ProductScraperService:
             if response.status_code == 200:
                 data = response.json()
                 if 'product' in data:
-                    return self._parse_product_json(data['product'], base_url)
+                    return self._parse_product_json(data['product'], base_url, detected_currency, currency_symbol)
             
             # Fallback to scraping the HTML page
             response = self.session.get(product_url, timeout=5)
@@ -180,13 +182,32 @@ class ProductScraperService:
             price_elem = soup.find('.price') or soup.find('[data-price]') or soup.find('.product-price')
             price = price_elem.get_text(strip=True) if price_elem else None
             
+            # Use detected currency or default to INR for .in domains
+            currency = detected_currency
+            symbol = currency_symbol
+            if not currency and ".in" in base_url:
+                currency = "INR"
+                symbol = "₹"
+            elif not currency:
+                currency = "USD"
+                symbol = "$"
+            formatted_price = None
+            if price and symbol:
+                try:
+                    price_float = float(price.replace(',', '').replace('₹', '').replace('$', ''))
+                    formatted_price = f"{symbol}{price_float:,.0f}" if currency == 'INR' else f"{symbol}{price_float:.2f}"
+                except Exception:
+                    formatted_price = f"{symbol}{price}"
+            
             return Product(
                 title=title,
                 handle=handle,
                 price=price,
-                url=product_url
+                url=product_url,
+                formatted_price=formatted_price,
+                currency=currency,
+                currency_symbol=symbol
             )
-            
         except Exception as e:
             logger.warning(f"Error getting product from {product_url}: {e}")
             return None
@@ -223,8 +244,8 @@ class ProductScraperService:
                 price = variant.get('price')
                 compare_at_price = variant.get('compare_at_price')
                 available = variant.get('available', False)
-                # Use formatted_price from variant if present, else format here
-                if 'formatted_price' in variant:
+                # Always set formatted_price at the product level
+                if 'formatted_price' in variant and variant['formatted_price']:
                     formatted_price = variant['formatted_price']
                 elif price and currency and symbol:
                     try:
@@ -232,6 +253,8 @@ class ProductScraperService:
                         formatted_price = f"{symbol}{price_float:,.0f}" if currency == 'INR' else f"{symbol}{price_float:.2f}"
                     except Exception:
                         formatted_price = f"{symbol}{price}"
+                else:
+                    formatted_price = None
             
             # Build product URL
             handle = product_data.get('handle', '')
