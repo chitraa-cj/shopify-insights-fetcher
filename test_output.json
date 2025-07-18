@@ -1,0 +1,4 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100   346  100   302  100    44   2974    433 --:--:-- --:--:-- --:--:--  3425
+{"detail":"Internal server error: HTTPSConnectionPool(host='shop.gymshark.com', port=443): Max retries exceeded with url: / (Caused by NameResolutionError(\"<urllib3.connection.HTTPSConnection object at 0x7f8c46129310>: Failed to resolve 'shop.gymshark.com' ([Errno -2] Name or service not known)\"))"}

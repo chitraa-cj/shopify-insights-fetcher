@@ -176,7 +176,7 @@ class DatabaseService:
     
     async def _save_products(self, conn, brand_id: int, products: List[Product], hero_products: List[Product]):
         """Save products to database"""
-        hero_product_ids = {p.product_id for p in hero_products} if hero_products else set()
+        hero_product_ids = {p.id for p in hero_products} if hero_products else set()
         
         for product in products:
             await conn.execute('''
@@ -186,15 +186,15 @@ class DatabaseService:
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             ''',
                 brand_id,
-                product.product_id,
+                product.id,
                 product.title,
                 product.product_type,
-                float(product.price) if product.price and str(product.price).replace('.', '').isdigit() else None,
-                'USD',  # Default currency
+                product.price_usd if product.price_usd else (float(product.price) if product.price and str(product.price).replace('.', '').isdigit() else None),
+                product.currency if product.currency else 'USD',
                 product.description,
-                product.image_url,
+                product.images[0] if product.images else None,
                 json.dumps(product.tags) if product.tags else None,
-                product.product_id in hero_product_ids
+                product.id in hero_product_ids
             )
     
     async def _save_faqs(self, conn, brand_id: int, faqs: List[FAQ]):
