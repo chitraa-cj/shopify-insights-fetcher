@@ -31,6 +31,11 @@ A comprehensive Python-based web application that extracts brand insights from S
 git clone <repository-url>
 cd shopify-insights-fetcher
 
+
+# Activate Environmenet 
+ source .venv/bin/activate  
+
+
 # Install dependencies (using uv package manager)
 uv sync
 ```
@@ -425,28 +430,3 @@ tail -f application.log
 python -c "import asyncpg; print('Database module available')"
 ```
 
-## Performance Notes
-
-- **Average Extraction Time**: 45-60 seconds
-- **Products Processed**: Up to 1000 products per store
-- **AI Validation**: 10-15 API calls per extraction
-- **Database Operations**: Atomic transactions with rollback support
-- **Memory Usage**: ~50MB per extraction process
-
-## API Rate Limits
-
-- **Gemini API**: Standard quotas apply
-- **Target Websites**: Respectful scraping with delays
-- **Database**: No artificial limits
-
-## Support
-
-For issues, check:
-1. Application logs for detailed error messages
-2. Database connection status
-3. Gemini API key validity
-4. Network connectivity to target websites
-
-## License
-
-[Your License Here]

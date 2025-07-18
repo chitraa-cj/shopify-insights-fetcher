@@ -73,7 +73,7 @@ class ProductScraperService:
             
             # Convert to Product objects
             for product_data in processed_products_data:
-                product = self._parse_product_json(product_data, base_url)
+                product = self._parse_product_json(product_data, base_url, detected_currency, currency_symbol)
                 if product:
                     # Add currency information to product
                     product.currency = detected_currency
@@ -191,14 +191,16 @@ class ProductScraperService:
             logger.warning(f"Error getting product from {product_url}: {e}")
             return None
     
-    def _parse_product_json(self, product_data: dict, base_url: str) -> Product:
+    def _parse_product_json(self, product_data: dict, base_url: str, detected_currency=None, currency_symbol=None) -> Product:
         """
         Parse product data from Shopify JSON API response
         
         Args:
             product_data: Product data from JSON API
             base_url: Base URL of the store
-            
+            detected_currency: Detected currency code (e.g., 'INR')
+            currency_symbol: Detected currency symbol (e.g., '₹')
+        
         Returns:
             Product: Parsed product information
         """
@@ -212,12 +214,24 @@ class ProductScraperService:
             price = None
             compare_at_price = None
             available = False
+            formatted_price = None
+            currency = detected_currency
+            symbol = currency_symbol
             
             if product_data.get('variants'):
                 variant = product_data['variants'][0]  # Use first variant
                 price = variant.get('price')
                 compare_at_price = variant.get('compare_at_price')
                 available = variant.get('available', False)
+                # Use formatted_price from variant if present, else format here
+                if 'formatted_price' in variant:
+                    formatted_price = variant['formatted_price']
+                elif price and currency and symbol:
+                    try:
+                        price_float = float(price)
+                        formatted_price = f"{symbol}{price_float:,.0f}" if currency == 'INR' else f"{symbol}{price_float:.2f}"
+                    except Exception:
+                        formatted_price = f"{symbol}{price}"
             
             # Build product URL
             handle = product_data.get('handle', '')
@@ -235,9 +249,11 @@ class ProductScraperService:
                 tags=self._parse_tags(product_data.get('tags', [])),
                 images=images,
                 url=product_url,
-                available=available
+                available=available,
+                formatted_price=formatted_price,
+                currency=currency,
+                currency_symbol=symbol
             )
-            
         except Exception as e:
             logger.error(f"Error parsing product JSON: {e}")
             return Product(title="Unknown Product")

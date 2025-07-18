@@ -269,11 +269,33 @@ class CompetitorAnalyzer:
         
         min_price = min(prices)
         max_price = max(prices)
-        
+
+        # Determine currency from products
+        currency = None
+        currency_symbol = None
+        for product in products:
+            if hasattr(product, 'currency') and product.currency:
+                currency = product.currency
+                break
+        for product in products:
+            if hasattr(product, 'currency_symbol') and product.currency_symbol:
+                currency_symbol = product.currency_symbol
+                break
+        if not currency:
+            currency = 'USD'
+        if not currency_symbol:
+            currency_symbol = '$'
+
         if min_price == max_price:
-            return f"${min_price:.2f}"
+            if currency == 'INR':
+                return f"₹{min_price:,.0f}"
+            else:
+                return f"{currency_symbol}{min_price:.2f}"
         else:
-            return f"${min_price:.2f} - ${max_price:.2f}"
+            if currency == 'INR':
+                return f"₹{min_price:,.0f} - ₹{max_price:,.0f}"
+            else:
+                return f"{currency_symbol}{min_price:.2f} - {currency_symbol}{max_price:.2f}"
     
     def _calculate_social_score(self, social_handles) -> int:
         """Calculate social presence score (0-100)"""
