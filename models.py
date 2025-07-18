@@ -73,6 +73,24 @@ class AIValidationResult(BaseModel):
     confidence_score: float = 0.0
     validation_notes: List[str] = []
 
+class CompetitorInfo(BaseModel):
+    """Model for individual competitor information"""
+    store_url: str
+    brand_name: str
+    product_count: int
+    price_range: str
+    social_presence_score: int  # 0-100
+    key_features: List[str] = []
+    strengths: List[str] = []
+    weaknesses: List[str] = []
+
+class CompetitorAnalysis(BaseModel):
+    """Model for competitive analysis results"""
+    competitors_found: int
+    competitor_insights: List[CompetitorInfo] = []
+    competitive_analysis: str
+    market_positioning: str
+
 class BrandInsights(BaseModel):
     """Main model containing all brand insights"""
     website_url: str
@@ -88,6 +106,7 @@ class BrandInsights(BaseModel):
     total_products_found: int = 0
     extraction_success: bool = True
     errors: List[str] = []
+    competitor_analysis: Optional[CompetitorAnalysis] = None
     ai_validation: AIValidationResult = Field(default_factory=AIValidationResult)
 
     class Config:

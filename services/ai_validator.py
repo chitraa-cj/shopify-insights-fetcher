@@ -619,20 +619,34 @@ class AIValidatorService:
                 faq_sections = [text_content]
             
             extraction_prompt = f"""
-            Extract FAQ questions and answers from this content from {url}:
+            Extract ONLY genuine FAQ (Frequently Asked Questions) content from {url}.
             
+            IGNORE navigation menus, product categories, and shopping links such as:
+            - "SHOP FOR WOMEN", "DIY HAIR EXTENSIONS", "HAIR LOSS SOLUTION"
+            - Product category listings or menu items
+            
+            LOOK FOR actual customer service questions about:
+            - Product usage, care, and sizing
+            - Shipping, returns, and exchanges
+            - Account management and ordering
+            - Payment and billing questions
+            
+            Content to analyze:
             {' '.join(faq_sections)}
             
-            Look for question-answer pairs. Questions often start with:
-            - "What", "How", "Why", "When", "Where", "Do you", "Can I", etc.
+            Only extract genuine question-answer pairs where:
+            - Questions end with '?' and sound like customer inquiries
+            - Answers provide helpful, informative responses
             
             Respond with JSON in this format:
             {{
                 "faqs": [
-                    {{"question": "extracted question", "answer": "extracted answer"}},
+                    {{"question": "How do I care for my hair extensions?", "answer": "Detailed care instructions..."}},
                     ...
                 ]
             }}
+            
+            If no genuine FAQs found, return empty faqs array.
             """
             
             response = self.client.models.generate_content(

@@ -91,6 +91,7 @@ class ShopifyInsightsFetcher {
         this.populateProducts(data);
         this.populateSocialContact(data);
         this.populatePoliciesFaqs(data);
+        this.populateCompetitorAnalysis(data);
         this.populateAIValidation(data);
         this.populateRawJSON(data);
 
@@ -432,6 +433,84 @@ class ShopifyInsightsFetcher {
         `;
         
         container.innerHTML += aiValidationHtml;
+    }
+
+    populateCompetitorAnalysis(data) {
+        if (!data.competitor_analysis || data.competitor_analysis.competitors_found === 0) {
+            return; // Skip if no competitor data
+        }
+
+        const container = document.getElementById('socialContactSection');
+        const analysis = data.competitor_analysis;
+        
+        // Add competitor analysis section
+        const competitorHtml = `
+            <div class="section-divider"></div>
+            <h6><i class="fas fa-chart-line me-2"></i>Competitive Analysis</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #28a745, #20c997);">
+                        <span class="stat-number">${analysis.competitors_found}</span>
+                        <span class="stat-label">Competitors Found</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-info">
+                        <strong>Market Position:</strong> ${analysis.market_positioning}
+                    </div>
+                </div>
+            </div>
+            
+            ${analysis.competitor_insights && analysis.competitor_insights.length > 0 ? `
+                <div class="mt-3">
+                    <h6><i class="fas fa-users me-2"></i>Key Competitors</h6>
+                    <div class="row">
+                        ${analysis.competitor_insights.map(competitor => `
+                            <div class="col-md-6 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">${competitor.brand_name}</h6>
+                                        <p class="card-text">
+                                            <small class="text-muted">${competitor.store_url}</small><br>
+                                            <strong>Products:</strong> ${competitor.product_count}<br>
+                                            <strong>Price Range:</strong> ${competitor.price_range}<br>
+                                            <strong>Social Score:</strong> ${competitor.social_presence_score}/100
+                                        </p>
+                                        ${competitor.strengths && competitor.strengths.length > 0 ? `
+                                            <div class="mb-2">
+                                                <strong>Strengths:</strong>
+                                                <ul class="list-unstyled">
+                                                    ${competitor.strengths.map(strength => `<li><i class="fas fa-plus-circle text-success me-1"></i>${strength}</li>`).join('')}
+                                                </ul>
+                                            </div>
+                                        ` : ''}
+                                        ${competitor.weaknesses && competitor.weaknesses.length > 0 ? `
+                                            <div>
+                                                <strong>Opportunities:</strong>
+                                                <ul class="list-unstyled">
+                                                    ${competitor.weaknesses.map(weakness => `<li><i class="fas fa-exclamation-triangle text-warning me-1"></i>${weakness}</li>`).join('')}
+                                                </ul>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${analysis.competitive_analysis ? `
+                <div class="mt-3">
+                    <h6><i class="fas fa-lightbulb me-2"></i>Competitive Insights</h6>
+                    <div class="alert alert-secondary">
+                        <pre style="white-space: pre-wrap; margin: 0;">${analysis.competitive_analysis}</pre>
+                    </div>
+                </div>
+            ` : ''}
+        `;
+        
+        container.innerHTML += competitorHtml;
     }
 
     populateRawJSON(data) {

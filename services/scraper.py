@@ -10,6 +10,8 @@ from services.product_scraper import ProductScraperService
 from services.content_scraper import ContentScraperService
 from services.social_scraper import SocialScraperService
 from services.ai_validator import AIValidatorService
+from services.competitor_analyzer import CompetitorAnalyzer
+from services.database_service import DatabaseService
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,8 @@ class ShopifyScraperService:
         self.content_scraper = ContentScraperService(self.session)
         self.social_scraper = SocialScraperService(self.session)
         self.ai_validator = AIValidatorService(self.session)
+        self.competitor_analyzer = CompetitorAnalyzer()
+        self.database_service = DatabaseService()
     
     async def extract_all_insights(self, url: str) -> BrandInsights:
         """
@@ -84,6 +88,26 @@ class ShopifyScraperService:
             except Exception as e:
                 logger.error(f"Error in AI validation: {e}")
                 insights.errors.append(f"AI validation error: {str(e)}")
+            
+            # Perform competitor analysis
+            try:
+                insights.competitor_analysis = await self.competitor_analyzer.analyze_competitors(url, insights)
+                logger.info(f"Competitor analysis completed: found {insights.competitor_analysis.competitors_found} competitors")
+            except Exception as e:
+                logger.error(f"Error in competitor analysis: {e}")
+                insights.errors.append(f"Competitor analysis error: {str(e)}")
+            
+            # Save to database
+            try:
+                await self.database_service.initialize()
+                brand_id = await self.database_service.save_brand_insights(insights)
+                if brand_id:
+                    logger.info(f"Successfully saved insights to database with ID: {brand_id}")
+                else:
+                    logger.warning("Failed to save insights to database")
+            except Exception as e:
+                logger.error(f"Error saving to database: {e}")
+                insights.errors.append(f"Database save error: {str(e)}")
             
             return insights
             

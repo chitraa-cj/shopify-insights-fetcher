@@ -5,6 +5,7 @@ from pydantic import BaseModel, HttpUrl
 import logging
 import traceback
 from services.scraper import ShopifyScraperService
+from services.database_service import DatabaseService
 from models import BrandInsights
 
 # Configure logging
@@ -68,6 +69,36 @@ async def extract_brand_insights(request: WebsiteRequest):
         logger.error(f"Internal error while processing {url}: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@app.get("/database/brands")
+async def get_all_brands():
+    """Get summary of all brands stored in database"""
+    try:
+        db_service = DatabaseService()
+        await db_service.initialize()
+        brands = await db_service.get_all_brands()
+        await db_service.close()
+        return {"brands": brands}
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@app.get("/database/brand/{store_url:path}")
+async def get_brand_details(store_url: str):
+    """Get detailed brand information from database"""
+    try:
+        db_service = DatabaseService()
+        await db_service.initialize()
+        brand_data = await db_service.get_brand_insights(store_url)
+        await db_service.close()
+        
+        if not brand_data:
+            raise HTTPException(status_code=404, detail="Brand not found in database")
+        
+        return brand_data
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 @app.get("/health")
 async def health_check():

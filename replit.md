@@ -8,6 +8,16 @@ The Shopify Store Insights Fetcher is a Python-based web application that extrac
 
 Preferred communication style: Simple, everyday language.
 Backend preference: Python-only implementation with AI-powered validation using Gemini.
+Latest Request: Fix FAQ extraction to avoid navigation menus, add competitor analysis, and implement database persistence.
+
+## Recent Enhancements (Latest)
+
+- ✅ **Enhanced AI FAQ Validation**: AI now distinguishes real FAQs from navigation menus and product categories
+- ✅ **Competitor Analysis Feature**: Automatically finds and analyzes similar Shopify stores with pricing, product count, and market positioning
+- ✅ **PostgreSQL Database Persistence**: All extracted data is now saved to database with full relationship structure
+- ✅ **Improved Policy Extraction**: Better extraction of privacy policy, return policy, and terms of service content
+- ✅ **Database Viewing Endpoints**: Added `/database/brands` and `/database/brand/{url}` endpoints for stored data access
+- ✅ **Enhanced AI HTML Analysis**: When initial scraping fails, AI re-analyzes HTML structure for better content extraction
 
 ## System Architecture
 
