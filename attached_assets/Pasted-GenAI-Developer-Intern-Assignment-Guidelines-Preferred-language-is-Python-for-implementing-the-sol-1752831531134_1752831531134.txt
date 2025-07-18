@@ -1,0 +1,53 @@
+GenAI Developer Intern Assignment
+
+Guidelines:
+Preferred language is Python for implementing the solution, and preferred framework will be FastAPI/Flask.
+If you intend to use a database for persistence, MySQL will be a preferred db.
+Your APIs should be in a demoable state, either via Postman or an UI.
+The focus should be on developing a robust, scalable, and maintainable backend system.
+Candidates should adhere to best practices in software development, including OOP principles, SOLID design patterns, clean code, and RESTful API design.
+Use of defined models (Eg. Pydantic), code-readability, structure, code deduplication, edge-cases handling are also high impact regions in your submission’s evaluation.
+The requirements are divided into two sections:
+Mandatory Section: You must complete ALL mandatory requirements to qualify.
+Bonus Section: Attempt the bonus requirements only after completing the mandatory section. Bonus features will earn you extra points and provide an edge over other candidates.
+
+Shopify store Insights-Fetcher Application
+
+Pre-read context - Shopify is an e-commerce platform that enables other D2C businesses to establish and manage online stores, process payments, and sell across various channels. Millions of businesses have their online stores, based on shopify platform only. We need to get insights out of those stores.
+
+
+MANDATORY Requirements:
+Your task is to design and implement a Python Application, that fetches a Brand’s given shopify website’s content, (without the use of official Shopify API), and organize the Brand Data into a well structured form. Try to get as much as insights from the webstore as possible. The bare minimum insights/information that you need to get from the store website are given below:
+Whole Product Catalog (A list of products, the store holds)
+Hero Products (Products listed on the home page itself)
+Privacy Policy
+Return, Refund Policies
+Brand FAQs listed, examples:
+Q) Do you have COD as a payment option?
+A) Yes, we do have
+Social Handles of the brand, Example - Instagram handle, FB, Tiktok (Outside India brands), etc.
+Contact details - email(s), phone number(s), etc.
+Brand text context (About the brand)
+Important links, like - Order tracking, Contact Us, Blogs
+
+You can have more insights/datapoints, if you find common among shopify sites.
+
+You have to expose a route that expects a website_url, we give the exact shopify store’s url like in the references given below, and the API returns us a JSON response, having the Brand Context object as response if run successfully, otherwise return the appropriate response with error’s status_code, like 
+401 if website not found
+500 if some internal error occurs
+
+
+References:
+You can simply Google some shopify sites like - memy.co.in, hairoriginals.com
+A list of shopify sites - https://webinopoly.com/blogs/news/top-100-most-successful-shopify-stores
+
+Some Hints:
+In a Shopify website, you can easily find products by going to the /products.json route of the website/webstore.
+Some store features like “product_catalog”, “privacy_policy route”, might be common for most shopify sites, but some features like FAQs, can have different flows. For example, some sites directly have a list of FAQs, some might have a separate page for every FAQ (https://colourpop.com), some might have a mixed flow, so have your research accordingly.
+You can leverage LLMs to structure the fetched data, it might help in structuring disorganized data.
+
+
+
+BONUS Section:
+Competitor Analysis - Get the competitors of the given brand (brand’s website), you can try a simple web search, or some other better logic, if you get. And get the same insights, for its competitors’ webstores also.
+Persist all the data in a SQL DB.
