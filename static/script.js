@@ -213,7 +213,6 @@ class ShopifyInsightsFetcher {
                 }
             }, 100);
         }
-        }
 
         // Sample from product catalog
         if (data.product_catalog && data.product_catalog.length > 0) {
@@ -263,7 +262,6 @@ class ShopifyInsightsFetcher {
                     });
                 }
             }, 100);
-        }
         }
 
         // If no products found
