@@ -9,6 +9,7 @@ from google.genai import types
 from pydantic import BaseModel
 from bs4 import BeautifulSoup
 import requests
+from urllib.parse import urljoin
 
 from models import BrandContext, PolicyInfo, FAQ, SocialHandles, ContactDetails, ImportantLinks, AIValidationResult
 
@@ -391,37 +392,45 @@ class AIValidatorService:
         return AIValidationResult()
     
     async def _extract_policies_from_html(self, url: str, html_content: str) -> Optional[PolicyInfo]:
-        """Use AI to extract policy information from HTML structure"""
+        """Use AI to extract policy information and content from HTML structure"""
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
             
-            # Look for policy-related links
+            # Remove navigation elements for cleaner analysis
+            for element in soup(['nav', 'header', 'footer', 'menu', 'aside']):
+                element.extract()
+            
+            # Look for policy-related links with better filtering
             policy_links = []
             for link in soup.find_all('a', href=True):
                 href = link['href'].lower()
-                text = link.get_text().lower()
+                text = link.get_text().lower().strip()
+                
+                # Filter out obvious non-policy links
+                if any(skip in text for skip in ['shop', 'product', 'collection', 'cart', 'account login']):
+                    continue
+                    
                 if any(keyword in href or keyword in text for keyword in ['policy', 'terms', 'privacy', 'return', 'refund']):
-                    policy_links.append({"url": link['href'], "text": link.get_text().strip()})
+                    policy_links.append({"url": urljoin(url, link['href']), "text": text})
             
             if not policy_links:
                 return None
             
+            # Use AI to categorize policy URLs
             extraction_prompt = f"""
-            Extract policy URLs from these links found on {url}:
+            Extract and categorize policy URLs from these links found on {url}:
             {json.dumps(policy_links, indent=2)}
             
             Categorize them into policy types:
-            - Privacy Policy
-            - Return Policy  
-            - Refund Policy
-            - Terms of Service
+            - Privacy Policy (data protection, privacy practices)
+            - Return Policy (returns, exchanges, refunds)
+            - Terms of Service (terms of use, user agreements)
             
             Respond with JSON in this format:
             {{
-                "privacy_policy_url": "URL or null",
-                "return_policy_url": "URL or null", 
-                "refund_policy_url": "URL or null",
-                "terms_of_service_url": "URL or null"
+                "privacy_policy_url": "full URL or null",
+                "return_policy_url": "full URL or null",
+                "terms_of_service_url": "full URL or null"
             }}
             """
             
@@ -435,12 +444,45 @@ class AIValidatorService:
             
             if response.text:
                 policy_data = json.loads(response.text)
-                return PolicyInfo(
-                    privacy_policy_url=policy_data.get('privacy_policy_url'),
-                    return_policy_url=policy_data.get('return_policy_url'),
-                    refund_policy_url=policy_data.get('refund_policy_url'),
-                    terms_of_service_url=policy_data.get('terms_of_service_url')
-                )
+                policy_info = PolicyInfo()
+                
+                # Extract actual content from policy URLs
+                for policy_type, policy_url in policy_data.items():
+                    if policy_url and policy_url != "null":
+                        try:
+                            policy_response = self.session.get(policy_url, timeout=10)
+                            if policy_response.status_code == 200:
+                                policy_soup = BeautifulSoup(policy_response.text, 'html.parser')
+                                
+                                # Remove navigation from policy page
+                                for element in policy_soup(['nav', 'header', 'footer', 'menu']):
+                                    element.extract()
+                                
+                                # Extract main content
+                                content = policy_soup.get_text()[:3000]  # Limit content size
+                                content = ' '.join(content.split())  # Clean whitespace
+                                
+                                if policy_type == "privacy_policy_url":
+                                    policy_info.privacy_policy_url = policy_url
+                                    policy_info.privacy_policy_content = content
+                                elif policy_type == "return_policy_url":
+                                    policy_info.return_policy_url = policy_url
+                                    policy_info.return_policy_content = content
+                                elif policy_type == "terms_of_service_url":
+                                    policy_info.terms_of_service_url = policy_url
+                                    policy_info.terms_of_service_content = content
+                                    
+                        except Exception as e:
+                            logger.warning(f"Could not fetch content from {policy_url}: {e}")
+                            # Still save the URL even if content fetch fails
+                            if policy_type == "privacy_policy_url":
+                                policy_info.privacy_policy_url = policy_url
+                            elif policy_type == "return_policy_url":
+                                policy_info.return_policy_url = policy_url
+                            elif policy_type == "terms_of_service_url":
+                                policy_info.terms_of_service_url = policy_url
+                
+                return policy_info
             
         except Exception as e:
             logger.error(f"Error extracting policies from HTML: {e}")
@@ -600,23 +642,77 @@ class AIValidatorService:
         return None
     
     async def _extract_faqs_from_html(self, url: str, html_content: str) -> Optional[List[FAQ]]:
-        """Use AI to extract FAQs from HTML structure"""
+        """Use AI to extract FAQs from HTML structure with better targeting"""
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
             
-            # Look for FAQ-related content
+            # Remove navigation, header, footer, and menu elements completely
+            for element in soup(['nav', 'header', 'footer', 'menu', 'aside']):
+                element.extract()
+            
+            # Remove elements with navigation/menu classes
+            nav_selectors = [
+                '[class*="nav"]', '[class*="menu"]', '[class*="header"]', 
+                '[class*="footer"]', '[class*="sidebar"]', '[id*="nav"]',
+                '[id*="menu"]', '[class*="breadcrumb"]'
+            ]
+            for selector in nav_selectors:
+                for element in soup.select(selector):
+                    element.extract()
+            
+            # Look for FAQ-specific sections with priority order
             faq_sections = []
             
-            # Common FAQ selectors
-            for selector in ['.faq', '.faqs', '.questions', '.help', '.support']:
+            # Priority 1: Dedicated FAQ sections
+            faq_selectors = [
+                '.faq', '.faqs', '.frequently-asked-questions',
+                '#faq', '#faqs', '#frequently-asked-questions',
+                '[class*="faq"]', '[id*="faq"]',
+                '.questions', '.help-center', '.support-center',
+                '.customer-support', '.help-section'
+            ]
+            
+            for selector in faq_selectors:
                 elements = soup.select(selector)
                 for element in elements:
-                    faq_sections.append(element.get_text()[:1000])
+                    text = element.get_text().strip()
+                    if len(text) > 100:  # Ensure substantial content
+                        faq_sections.append(text[:2000])  # Increase limit for FAQs
             
+            # Priority 2: Look for FAQ pages linked from main page
             if not faq_sections:
-                # Fallback to looking for question patterns in general text
-                text_content = soup.get_text()[:3000]
-                faq_sections = [text_content]
+                faq_links = []
+                for link in soup.find_all('a', href=True):
+                    href = link['href'].lower()
+                    text = link.get_text().lower()
+                    if any(keyword in href or keyword in text for keyword in ['faq', 'help', 'support', 'question']):
+                        faq_links.append(urljoin(url, link['href']))
+                
+                # Try to fetch content from FAQ links
+                for faq_url in faq_links[:2]:  # Limit to 2 FAQ pages
+                    try:
+                        response = self.session.get(faq_url, timeout=10)
+                        if response.status_code == 200:
+                            faq_soup = BeautifulSoup(response.text, 'html.parser')
+                            # Remove navigation from FAQ page too
+                            for element in faq_soup(['nav', 'header', 'footer', 'menu']):
+                                element.extract()
+                            faq_content = faq_soup.get_text()[:3000]
+                            if len(faq_content) > 200:
+                                faq_sections.append(faq_content)
+                    except Exception as e:
+                        logger.warning(f"Could not fetch FAQ page {faq_url}: {e}")
+                        continue
+            
+            # Priority 3: Search for question patterns in main content
+            if not faq_sections:
+                main_content = soup.get_text()[:5000]
+                # Look for question patterns
+                import re
+                question_pattern = r'[A-Z][^.!?]*\?'
+                questions = re.findall(question_pattern, main_content)
+                if len(questions) >= 3:  # At least 3 questions found
+                    faq_sections = [main_content]
             
             extraction_prompt = f"""
             Extract ONLY genuine FAQ (Frequently Asked Questions) content from {url}.

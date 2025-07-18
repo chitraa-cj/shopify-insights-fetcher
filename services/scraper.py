@@ -66,7 +66,7 @@ class ShopifyScraperService:
             
             # Run all extraction tasks concurrently
             tasks = [
-                self._extract_products(url, insights),
+                self._extract_products(url, insights, html_content),
                 self._extract_brand_context(url, insights, html_content),
                 self._extract_policies(url, insights, html_content),
                 self._extract_faqs(url, insights, html_content),
@@ -125,11 +125,17 @@ class ShopifyScraperService:
         
         return url
     
-    async def _extract_products(self, url: str, insights: BrandInsights):
-        """Extract product catalog and hero products"""
+    async def _extract_products(self, url: str, insights: BrandInsights, html_content: str = None):
+        """Extract product catalog with currency detection and hero products"""
         try:
-            # Extract product catalog
-            insights.product_catalog = await self.product_scraper.get_product_catalog(url)
+            # Extract product catalog with currency detection
+            products, currency, currency_symbol = await self.product_scraper.get_product_catalog_with_currency(url, html_content)
+            insights.product_catalog = products
+            
+            # Store currency information
+            if currency:
+                insights.detected_currency = currency
+                insights.currency_symbol = currency_symbol
             
             # Extract hero products from homepage
             insights.hero_products = await self.product_scraper.get_hero_products(url)

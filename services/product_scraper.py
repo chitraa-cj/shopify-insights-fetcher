@@ -1,11 +1,12 @@
 import asyncio
 import logging
 import json
-from typing import List
+from typing import List, Tuple
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from models import Product
+from services.currency_service import CurrencyService
 
 logger = logging.getLogger(__name__)
 
@@ -14,22 +15,26 @@ class ProductScraperService:
     
     def __init__(self, session: requests.Session):
         self.session = session
+        self.currency_service = CurrencyService()
     
-    async def get_product_catalog(self, base_url: str) -> List[Product]:
+    async def get_product_catalog_with_currency(self, base_url: str, html_content: str = None) -> Tuple[List[Product], str, str]:
         """
-        Extract complete product catalog from /products.json
+        Extract complete product catalog with currency detection
         
         Args:
             base_url: The base URL of the Shopify store
+            html_content: HTML content for currency detection
             
         Returns:
-            List[Product]: List of all products
+            Tuple[List[Product], str, str]: Products list, currency code, currency symbol
         """
+        all_products_data = []
         products = []
         page = 1
         limit = 250  # Maximum allowed by Shopify
         
         try:
+            # First, collect all raw product data
             while True:
                 products_url = f"{base_url}/products.json?limit={limit}&page={page}"
                 logger.info(f"Fetching products from: {products_url}")
@@ -42,25 +47,49 @@ class ProductScraperService:
                 if not data.get('products'):
                     break
                 
-                for product_data in data['products']:
-                    product = self._parse_product_json(product_data, base_url)
-                    products.append(product)
+                all_products_data.extend(data['products'])
                 
-                # If we got fewer products than the limit, we've reached the end
+                # Break if we got fewer products than requested (last page)
                 if len(data['products']) < limit:
                     break
-                
+                    
                 page += 1
-                
-                # Add a small delay to be respectful
-                await asyncio.sleep(0.1)
             
-            logger.info(f"Found {len(products)} products in catalog")
-            return products
+            logger.info(f"Found {len(all_products_data)} products in catalog")
+            
+            # Get HTML content if not provided
+            if not html_content:
+                try:
+                    response = self.session.get(base_url, timeout=10)
+                    html_content = response.text
+                except Exception as e:
+                    logger.warning(f"Could not fetch HTML for currency detection: {e}")
+                    html_content = ""
+            
+            # Detect currency and process products
+            detected_currency, currency_symbol, processed_products_data = self.currency_service.detect_and_convert_product_prices(
+                all_products_data, html_content, base_url
+            )
+            
+            # Convert to Product objects
+            for product_data in processed_products_data:
+                product = self._parse_product_json(product_data, base_url)
+                if product:
+                    # Add currency information to product
+                    product.currency = detected_currency
+                    product.currency_symbol = currency_symbol
+                    products.append(product)
+            
+            return products, detected_currency, currency_symbol
             
         except Exception as e:
             logger.error(f"Error fetching product catalog: {e}")
-            return []
+            return [], "USD", "$"
+    
+    async def get_product_catalog(self, base_url: str) -> List[Product]:
+        """Backward compatibility method for getting products without currency"""
+        products, _, _ = await self.get_product_catalog_with_currency(base_url)
+        return products
     
     async def get_hero_products(self, base_url: str) -> List[Product]:
         """

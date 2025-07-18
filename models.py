@@ -9,6 +9,10 @@ class Product(BaseModel):
     handle: Optional[str] = None
     description: Optional[str] = None
     price: Optional[str] = None
+    price_usd: Optional[float] = None
+    original_price: Optional[float] = None
+    formatted_price: Optional[str] = None
+    formatted_price_usd: Optional[str] = None
     compare_at_price: Optional[str] = None
     vendor: Optional[str] = None
     product_type: Optional[str] = None
@@ -16,6 +20,8 @@ class Product(BaseModel):
     images: List[str] = []
     url: Optional[str] = None
     available: Optional[bool] = None
+    currency: Optional[str] = None
+    currency_symbol: Optional[str] = None
 
 class FAQ(BaseModel):
     """Model for FAQ items"""
@@ -108,6 +114,8 @@ class BrandInsights(BaseModel):
     errors: List[str] = []
     competitor_analysis: Optional[CompetitorAnalysis] = None
     ai_validation: AIValidationResult = Field(default_factory=AIValidationResult)
+    detected_currency: Optional[str] = None
+    currency_symbol: Optional[str] = None
 
     class Config:
         json_encoders = {

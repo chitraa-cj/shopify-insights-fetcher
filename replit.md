@@ -12,12 +12,14 @@ Latest Request: Fix FAQ extraction to avoid navigation menus, add competitor ana
 
 ## Recent Enhancements (Latest)
 
-- ✅ **Enhanced AI FAQ Validation**: AI now distinguishes real FAQs from navigation menus and product categories
+- ✅ **Automatic Currency Detection & Conversion**: Intelligent currency detection from HTML content with automatic price conversion to USD
+- ✅ **Enhanced Product Model**: Added currency fields (original_price, currency, currency_symbol, price_usd, formatted_price) 
+- ✅ **Improved FAQ Extraction**: AI now completely filters out navigation menus, properly targets FAQ sections, and fetches content from dedicated FAQ pages
+- ✅ **Enhanced Policy Content Extraction**: Fetches actual policy content from policy URLs rather than just links
+- ✅ **Better HTML Content Analysis**: Removes navigation elements before AI analysis for cleaner, more accurate content extraction
 - ✅ **Competitor Analysis Feature**: Automatically finds and analyzes similar Shopify stores with pricing, product count, and market positioning
 - ✅ **PostgreSQL Database Persistence**: All extracted data is now saved to database with full relationship structure
-- ✅ **Improved Policy Extraction**: Better extraction of privacy policy, return policy, and terms of service content
 - ✅ **Database Viewing Endpoints**: Added `/database/brands` and `/database/brand/{url}` endpoints for stored data access
-- ✅ **Enhanced AI HTML Analysis**: When initial scraping fails, AI re-analyzes HTML structure for better content extraction
 
 ## System Architecture
 
