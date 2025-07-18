@@ -1,0 +1,207 @@
+{
+  "info": {
+    "name": "Shopify Insights Fetcher API",
+    "description": "Complete API collection for testing Shopify Store Insights Fetcher",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "test_store",
+      "value": "https://memy.co.in",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/",
+          "host": ["{{base_url}}"]
+        },
+        "description": "Test if the server is running and serving the web interface"
+      },
+      "response": []
+    },
+    {
+      "name": "Extract Brand Insights - Main Endpoint",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"website_url\": \"{{test_store}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/extract-insights",
+          "host": ["{{base_url}}"],
+          "path": ["extract-insights"]
+        },
+        "description": "Main endpoint that extracts comprehensive brand insights from a Shopify store. Returns complete BrandInsights object with products, FAQs, policies, social handles, and competitor analysis."
+      },
+      "response": []
+    },
+    {
+      "name": "Extract Insights - Invalid Store (Error Test)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"website_url\": \"https://invalid-nonexistent-store.com\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/extract-insights",
+          "host": ["{{base_url}}"],
+          "path": ["extract-insights"]
+        },
+        "description": "Test error handling - should return 401 status code for invalid/non-existent websites"
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Brands from Database",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/database/brands",
+          "host": ["{{base_url}}"],
+          "path": ["database", "brands"]
+        },
+        "description": "Retrieve summary of all brands stored in the database with basic information like store URL, brand name, product count, and extraction date."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Specific Brand Details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/database/brand/{{test_store}}",
+          "host": ["{{base_url}}"],
+          "path": ["database", "brand", "{{test_store}}"]
+        },
+        "description": "Get detailed information for a specific brand from database including products, FAQs, competitors, and all extracted data."
+      },
+      "response": []
+    },
+    {
+      "name": "Test Different Store - Alternative Test",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"website_url\": \"https://allbirds.com\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/extract-insights",
+          "host": ["{{base_url}}"],
+          "path": ["extract-insights"]
+        },
+        "description": "Test with a different Shopify store to verify functionality across different store configurations"
+      },
+      "response": []
+    },
+    {
+      "name": "Test Indian Store with INR Currency",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"website_url\": \"https://bombay-hair.com\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/extract-insights",
+          "host": ["{{base_url}}"],
+          "path": ["extract-insights"]
+        },
+        "description": "Test currency detection and conversion with an Indian store using INR currency"
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Pre-request script for logging",
+          "console.log('Testing endpoint:', pm.request.url.toString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script",
+          "pm.test('Response time is reasonable', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(90000); // 90 seconds max",
+          "});",
+          "",
+          "pm.test('Response has proper headers', function () {",
+          "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "});",
+          "",
+          "// Status code tests based on endpoint",
+          "if (pm.request.url.path.includes('extract-insights')) {",
+          "    if (pm.request.body && pm.request.body.raw.includes('invalid-nonexistent')) {",
+          "        pm.test('Invalid store returns 401', function () {",
+          "            pm.response.to.have.status(401);",
+          "        });",
+          "    } else {",
+          "        pm.test('Valid extraction returns 200', function () {",
+          "            pm.response.to.have.status(200);",
+          "        });",
+          "        ",
+          "        pm.test('Response contains required fields', function () {",
+          "            var jsonData = pm.response.json();",
+          "            pm.expect(jsonData).to.have.property('website_url');",
+          "            pm.expect(jsonData).to.have.property('brand_context');",
+          "            pm.expect(jsonData).to.have.property('product_catalog');",
+          "            pm.expect(jsonData).to.have.property('social_handles');",
+          "        });",
+          "    }",
+          "} else {",
+          "    pm.test('Database endpoints return 200', function () {",
+          "        pm.response.to.have.status(200);",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ]
+}

@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, HttpUrl
 import logging
 import traceback
+import requests
 from services.scraper import ShopifyScraperService
 from services.database_service import DatabaseService
 from models import BrandInsights
@@ -61,7 +62,7 @@ async def extract_brand_insights(request: WebsiteRequest):
         logger.error(f"Invalid website URL: {e}")
         raise HTTPException(status_code=401, detail=f"Website not found or invalid: {str(e)}")
     
-    except ConnectionError as e:
+    except (ConnectionError, requests.exceptions.ConnectionError) as e:
         logger.error(f"Connection error for {url}: {e}")
         raise HTTPException(status_code=401, detail="Website not found or unreachable")
     
