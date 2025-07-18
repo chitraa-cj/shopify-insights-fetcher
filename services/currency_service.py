@@ -18,24 +18,18 @@ class CurrencyService:
         
         # Currency symbols and codes mapping
         self.currency_symbols = {
-            '$': 'USD',
-            '₹': 'INR', 
-            '€': 'EUR',
-            '£': 'GBP',
-            '¥': 'JPY',
-            '₽': 'RUB',
-            'C$': 'CAD',
-            'A$': 'AUD',
-            'kr': 'SEK',
-            'zł': 'PLN',
-            'R$': 'BRL',
-            '₩': 'KRW',
-            '¢': 'USD',  # cents
-            'Rs': 'INR',
-            'INR': 'INR',
-            'USD': 'USD',
-            'EUR': 'EUR',
-            'GBP': 'GBP'
+            'USD': '$',
+            'INR': '₹', 
+            'EUR': '€',
+            'GBP': '£',
+            'JPY': '¥',
+            'RUB': '₽',
+            'CAD': 'C$',
+            'AUD': 'A$',
+            'SEK': 'kr',
+            'PLN': 'zł',
+            'BRL': 'R$',
+            'KRW': '₩'
         }
         
         # Exchange rates cache (in production, use a real API)

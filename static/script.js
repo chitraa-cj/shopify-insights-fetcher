@@ -5,6 +5,8 @@ class ShopifyInsightsFetcher {
         this.initializeEventListeners();
         this.currentData = null;
         this.currentCurrencyMode = 'original'; // 'original' or 'usd'
+        this.lastCurrencyInfo = null; // Store currency info for formatting
+        this.setupPolicyModals();
     }
 
     initializeEventListeners() {
@@ -283,18 +285,23 @@ class ShopifyInsightsFetcher {
         let price = 'Price not available';
         
         if (product.price !== null && product.price !== undefined) {
-            if (this.currentCurrencyMode === 'original' && product.formatted_price) {
-                // Show original currency with formatting
+            // Always prioritize formatted_price if available (contains proper currency)
+            if (product.formatted_price) {
                 price = product.formatted_price;
+            } else if (this.currentCurrencyMode === 'original' && product.original_price && product.currency_symbol) {
+                // Show original currency with formatting
+                price = `${product.currency_symbol}${product.original_price}`;
             } else if (this.currentCurrencyMode === 'usd' && product.price_usd) {
                 // Show USD converted price
                 price = `$${product.price_usd.toFixed(2)} USD`;
-            } else if (product.currency_symbol && product.original_price) {
-                // Fallback to original price with symbol
-                price = `${product.currency_symbol}${product.original_price}`;
             } else {
-                // Final fallback
-                price = `$${product.price}`;
+                // Final fallback - check if we have currency context
+                const currencyInfo = this.lastCurrencyInfo;
+                if (currencyInfo && currencyInfo.symbol && currencyInfo.symbol !== '$') {
+                    price = `${currencyInfo.symbol}${product.price}`;
+                } else {
+                    price = `$${product.price}`;
+                }
             }
         }
         
@@ -326,6 +333,95 @@ class ShopifyInsightsFetcher {
                 </div>
             </div>
         `;
+    }
+
+    setupPolicyModals() {
+        // Setup policy modal functionality
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('policy-link')) {
+                e.preventDefault();
+                const policyUrl = e.target.getAttribute('data-policy-url');
+                const policyTitle = e.target.getAttribute('data-policy-title');
+                this.showPolicyModal(policyUrl, policyTitle);
+            }
+        });
+    }
+
+    async showPolicyModal(policyUrl, policyTitle) {
+        const modal = new bootstrap.Modal(document.getElementById('policyModal'));
+        const modalBody = document.getElementById('policyModalBody');
+        const modalTitle = document.getElementById('policyModalLabel');
+        const viewOriginalBtn = document.getElementById('policyModalViewOriginal');
+
+        // Set title and original link
+        modalTitle.textContent = policyTitle;
+        viewOriginalBtn.href = policyUrl;
+
+        // Show loading state
+        modalBody.innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading ${policyTitle.toLowerCase()} content...</p>
+            </div>
+        `;
+
+        modal.show();
+
+        try {
+            // Use trafilatura to extract clean content
+            const response = await fetch('/extract-policy-content', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    policy_url: policyUrl
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.content) {
+                modalBody.innerHTML = `
+                    <div class="policy-content">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Content extracted from: <strong>${policyTitle}</strong>
+                        </div>
+                        <div class="content-text" style="max-height: 400px; overflow-y: auto;">
+                            ${this.formatPolicyContent(data.content)}
+                        </div>
+                    </div>
+                `;
+            } else {
+                modalBody.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Could not extract content from this policy page. Please use the "View Original" button to access the full policy.
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading policy content:', error);
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Error loading policy content. Please use the "View Original" button to access the full policy.
+                </div>
+            `;
+        }
+    }
+
+    formatPolicyContent(content) {
+        // Format the content for better readability
+        return content
+            .replace(/\n\s*\n/g, '</p><p>')
+            .replace(/^\s*/, '<p>')
+            .replace(/\s*$/, '</p>')
+            .replace(/(\d+\.\s)/g, '<br><strong>$1</strong>')
+            .replace(/(PRIVACY POLICY|TERMS OF SERVICE|RETURN POLICY|REFUND POLICY)/gi, '<h6>$1</h6>');
     }
 
     populateSocialContact(data) {
@@ -464,7 +560,7 @@ class ShopifyInsightsFetcher {
                 html += `
                     <div class="mb-2">
                         <i class="fas fa-file-alt me-2"></i>
-                        <a href="${policies[item.key]}" target="_blank" class="policy-link">${item.label}</a>
+                        <a href="#" class="policy-link" data-policy-url="${policies[item.key]}" data-policy-title="${item.label}">${item.label}</a>
                     </div>
                 `;
             });

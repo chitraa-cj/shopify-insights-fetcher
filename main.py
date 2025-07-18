@@ -33,6 +33,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 class WebsiteRequest(BaseModel):
     website_url: HttpUrl
 
+class PolicyContentRequest(BaseModel):
+    policy_url: str
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     """Serve the main HTML page"""
@@ -153,6 +156,40 @@ async def get_system_metrics():
     except Exception as e:
         logger.error(f"Metrics endpoint failed: {e}")
         raise HTTPException(status_code=500, detail=f"Metrics error: {str(e)}")
+
+@app.post("/extract-policy-content")
+async def extract_policy_content(request: PolicyContentRequest):
+    """Extract clean text content from a policy URL"""
+    try:
+        import trafilatura
+        
+        policy_url = request.policy_url
+        if not policy_url:
+            return {"success": False, "error": "Policy URL is required"}
+        
+        logger.info(f"Extracting policy content from: {policy_url}")
+        
+        # Fetch the policy page
+        downloaded = trafilatura.fetch_url(policy_url)
+        if not downloaded:
+            return {"success": False, "error": "Could not fetch policy page"}
+        
+        # Extract clean text content
+        content = trafilatura.extract(downloaded, include_formatting=True)
+        if not content:
+            return {"success": False, "error": "Could not extract content from policy page"}
+        
+        logger.info(f"Successfully extracted {len(content)} characters from policy")
+        
+        return {
+            "success": True,
+            "content": content,
+            "url": policy_url
+        }
+        
+    except Exception as e:
+        logger.error(f"Error extracting policy content: {e}")
+        return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
