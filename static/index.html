@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopify Store Insights Fetcher</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <header class="bg-primary text-white py-4 mb-4">
+            <div class="container">
+                <h1 class="mb-0">
+                    <i class="fas fa-store me-2"></i>
+                    Shopify Store Insights Fetcher
+                </h1>
+                <p class="mb-0 mt-2">Extract comprehensive brand insights from Shopify stores</p>
+            </div>
+        </header>
+
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-link me-2"></i>
+                                Enter Shopify Store URL
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="urlForm">
+                                <div class="mb-3">
+                                    <label for="websiteUrl" class="form-label">Website URL</label>
+                                    <input type="url" class="form-control" id="websiteUrl" 
+                                           placeholder="https://example.myshopify.com" required>
+                                    <div class="form-text">
+                                        Enter the full URL of the Shopify store you want to analyze
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100" id="extractBtn">
+                                    <i class="fas fa-search me-2"></i>
+                                    Extract Insights
+                                </button>
+                            </form>
+
+                            <div class="mt-4">
+                                <h6>Example Shopify Stores:</h6>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-outline-secondary btn-sm example-url" 
+                                            data-url="https://memy.co.in">
+                                        memy.co.in
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm example-url" 
+                                            data-url="https://hairoriginals.com">
+                                        hairoriginals.com
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm example-url" 
+                                            data-url="https://colourpop.com">
+                                        colourpop.com
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mt-4">
+                        <div class="card-header bg-light">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                What We Extract
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                <li><i class="fas fa-check text-success me-2"></i>Product Catalog</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Hero Products</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Brand Information</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Policies & FAQs</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Social Media Handles</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Contact Details</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Important Links</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <!-- Loading State -->
+                    <div id="loadingState" class="d-none">
+                        <div class="card shadow-sm">
+                            <div class="card-body text-center py-5">
+                                <div class="spinner-border text-primary mb-3" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <h5>Extracting Insights...</h5>
+                                <p class="text-muted">This may take a few moments while we analyze the store</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="errorState" class="d-none">
+                        <div class="alert alert-danger" role="alert">
+                            <h5 class="alert-heading">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Error
+                            </h5>
+                            <p id="errorMessage"></p>
+                        </div>
+                    </div>
+
+                    <!-- Results -->
+                    <div id="resultsContainer" class="d-none">
+                        <!-- Brand Overview -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-building me-2"></i>
+                                    Brand Overview
+                                </h5>
+                            </div>
+                            <div class="card-body" id="brandOverview">
+                                <!-- Brand overview content will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Products -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-box me-2"></i>
+                                    Products
+                                </h5>
+                            </div>
+                            <div class="card-body" id="productsSection">
+                                <!-- Products content will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Social & Contact -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-share-alt me-2"></i>
+                                    Social Media & Contact
+                                </h5>
+                            </div>
+                            <div class="card-body" id="socialContactSection">
+                                <!-- Social and contact content will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Policies & FAQs -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-file-alt me-2"></i>
+                                    Policies & FAQs
+                                </h5>
+                            </div>
+                            <div class="card-body" id="policiesFaqsSection">
+                                <!-- Policies and FAQs content will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Raw JSON -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-code me-2"></i>
+                                    Raw JSON Response
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <button class="btn btn-outline-secondary btn-sm mb-3" id="downloadBtn">
+                                    <i class="fas fa-download me-2"></i>
+                                    Download JSON
+                                </button>
+                                <pre id="rawJson" class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;"></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Initial State -->
+                    <div id="initialState">
+                        <div class="card shadow-sm">
+                            <div class="card-body text-center py-5">
+                                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">Ready to Extract Insights</h5>
+                                <p class="text-muted">Enter a Shopify store URL to get started</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-light py-4 mt-5">
+        <div class="container text-center">
+            <p class="text-muted mb-0">
+                Shopify Store Insights Fetcher - Built with FastAPI and Bootstrap
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/script.js"></script>
+</body>
+</html>

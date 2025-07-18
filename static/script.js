@@ -1,0 +1,421 @@
+// Shopify Insights Fetcher Frontend JavaScript
+
+class ShopifyInsightsFetcher {
+    constructor() {
+        this.initializeEventListeners();
+        this.currentData = null;
+    }
+
+    initializeEventListeners() {
+        // Form submission
+        document.getElementById('urlForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.extractInsights();
+        });
+
+        // Example URL buttons
+        document.querySelectorAll('.example-url').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const url = e.target.getAttribute('data-url');
+                document.getElementById('websiteUrl').value = url;
+                this.extractInsights();
+            });
+        });
+
+        // Download button
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            this.downloadJSON();
+        });
+    }
+
+    async extractInsights() {
+        const urlInput = document.getElementById('websiteUrl');
+        const url = urlInput.value.trim();
+
+        if (!url) {
+            this.showError('Please enter a valid URL');
+            return;
+        }
+
+        try {
+            this.showLoading();
+            
+            const response = await fetch('/extract-insights', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    website_url: url
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || 'Failed to extract insights');
+            }
+
+            this.currentData = data;
+            this.displayResults(data);
+
+        } catch (error) {
+            console.error('Error:', error);
+            this.showError(error.message || 'An error occurred while extracting insights');
+        }
+    }
+
+    showLoading() {
+        document.getElementById('initialState').classList.add('d-none');
+        document.getElementById('errorState').classList.add('d-none');
+        document.getElementById('resultsContainer').classList.add('d-none');
+        document.getElementById('loadingState').classList.remove('d-none');
+    }
+
+    showError(message) {
+        document.getElementById('loadingState').classList.add('d-none');
+        document.getElementById('resultsContainer').classList.add('d-none');
+        document.getElementById('initialState').classList.add('d-none');
+        
+        document.getElementById('errorMessage').textContent = message;
+        document.getElementById('errorState').classList.remove('d-none');
+    }
+
+    displayResults(data) {
+        document.getElementById('loadingState').classList.add('d-none');
+        document.getElementById('errorState').classList.add('d-none');
+        document.getElementById('initialState').classList.add('d-none');
+
+        // Populate sections
+        this.populateBrandOverview(data);
+        this.populateProducts(data);
+        this.populateSocialContact(data);
+        this.populatePoliciesFaqs(data);
+        this.populateRawJSON(data);
+
+        document.getElementById('resultsContainer').classList.remove('d-none');
+    }
+
+    populateBrandOverview(data) {
+        const container = document.getElementById('brandOverview');
+        const brand = data.brand_context;
+        
+        let html = `
+            <div class="row">
+                <div class="col-md-8">
+                    <h6><i class="fas fa-store me-2"></i>Brand Name</h6>
+                    <p class="mb-3">${brand.brand_name || 'Not available'}</p>
+                    
+                    ${brand.brand_description ? `
+                        <h6><i class="fas fa-info-circle me-2"></i>Description</h6>
+                        <p class="mb-3">${brand.brand_description}</p>
+                    ` : ''}
+                    
+                    ${brand.about_us_content ? `
+                        <h6><i class="fas fa-book-open me-2"></i>About Us</h6>
+                        <p class="mb-3">${this.truncateText(brand.about_us_content, 300)}</p>
+                    ` : ''}
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <span class="stat-number">${data.total_products_found}</span>
+                        <span class="stat-label">Total Products</span>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #6f42c1, #e83e8c);">
+                        <span class="stat-number">${data.hero_products.length}</span>
+                        <span class="stat-label">Hero Products</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        if (data.errors && data.errors.length > 0) {
+            html += `
+                <div class="alert alert-warning mt-3">
+                    <h6><i class="fas fa-exclamation-triangle me-2"></i>Extraction Notes</h6>
+                    <ul class="mb-0">
+                        ${data.errors.map(error => `<li>${error}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html;
+    }
+
+    populateProducts(data) {
+        const container = document.getElementById('productsSection');
+        
+        let html = '';
+
+        // Hero Products
+        if (data.hero_products && data.hero_products.length > 0) {
+            html += `
+                <h6><i class="fas fa-star me-2"></i>Hero Products</h6>
+                <div class="row mb-4">
+                    ${data.hero_products.slice(0, 6).map(product => this.createProductCard(product)).join('')}
+                </div>
+            `;
+        }
+
+        // Sample from product catalog
+        if (data.product_catalog && data.product_catalog.length > 0) {
+            html += `
+                <h6><i class="fas fa-box me-2"></i>Product Catalog (Sample)</h6>
+                <div class="row">
+                    ${data.product_catalog.slice(0, 8).map(product => this.createProductCard(product)).join('')}
+                </div>
+            `;
+
+            if (data.product_catalog.length > 8) {
+                html += `
+                    <div class="text-center mt-3">
+                        <span class="badge bg-secondary">+${data.product_catalog.length - 8} more products available in full dataset</span>
+                    </div>
+                `;
+            }
+        }
+
+        container.innerHTML = html || '<p class="text-muted">No products found</p>';
+    }
+
+    createProductCard(product) {
+        const image = product.images && product.images.length > 0 ? product.images[0] : null;
+        const price = product.price ? `$${product.price}` : 'Price not available';
+        
+        return `
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="product-card">
+                    <div class="d-flex">
+                        ${image ? `
+                            <img src="${image}" alt="${product.title}" class="product-image me-3" 
+                                 onerror="this.style.display='none'">
+                        ` : `
+                            <div class="product-image me-3 bg-light d-flex align-items-center justify-content-center">
+                                <i class="fas fa-image text-muted"></i>
+                            </div>
+                        `}
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${this.truncateText(product.title, 50)}</h6>
+                            <p class="text-success mb-1 fw-bold">${price}</p>
+                            ${product.vendor ? `<small class="text-muted">by ${product.vendor}</small>` : ''}
+                            ${product.url ? `
+                                <div class="mt-2">
+                                    <a href="${product.url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-external-link-alt me-1"></i>View
+                                    </a>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    populateSocialContact(data) {
+        const container = document.getElementById('socialContactSection');
+        const social = data.social_handles;
+        const contact = data.contact_details;
+        
+        let html = '<div class="row">';
+
+        // Social Media
+        html += '<div class="col-md-6">';
+        html += '<h6><i class="fas fa-share-alt me-2"></i>Social Media</h6>';
+        
+        const socialPlatforms = [
+            { key: 'instagram', icon: 'fab fa-instagram', color: '#E4405F' },
+            { key: 'facebook', icon: 'fab fa-facebook', color: '#1877F2' },
+            { key: 'twitter', icon: 'fab fa-twitter', color: '#1DA1F2' },
+            { key: 'tiktok', icon: 'fab fa-tiktok', color: '#000000' },
+            { key: 'youtube', icon: 'fab fa-youtube', color: '#FF0000' },
+            { key: 'linkedin', icon: 'fab fa-linkedin', color: '#0A66C2' },
+            { key: 'pinterest', icon: 'fab fa-pinterest', color: '#BD081C' }
+        ];
+
+        const foundSocial = socialPlatforms.filter(platform => social[platform.key]);
+        
+        if (foundSocial.length > 0) {
+            foundSocial.forEach(platform => {
+                html += `
+                    <a href="#" class="social-handle" style="border-left: 4px solid ${platform.color}">
+                        <i class="${platform.icon}"></i>
+                        ${social[platform.key]}
+                    </a>
+                `;
+            });
+        } else {
+            html += '<p class="text-muted">No social media handles found</p>';
+        }
+        
+        html += '</div>';
+
+        // Contact Information
+        html += '<div class="col-md-6">';
+        html += '<h6><i class="fas fa-address-book me-2"></i>Contact Information</h6>';
+        
+        if (contact.emails && contact.emails.length > 0) {
+            html += '<div class="mb-3">';
+            html += '<strong><i class="fas fa-envelope me-2"></i>Email:</strong><br>';
+            contact.emails.forEach(email => {
+                html += `<div class="contact-item"><a href="mailto:${email}">${email}</a></div>`;
+            });
+            html += '</div>';
+        }
+
+        if (contact.phone_numbers && contact.phone_numbers.length > 0) {
+            html += '<div class="mb-3">';
+            html += '<strong><i class="fas fa-phone me-2"></i>Phone:</strong><br>';
+            contact.phone_numbers.forEach(phone => {
+                html += `<div class="contact-item"><a href="tel:${phone}">${phone}</a></div>`;
+            });
+            html += '</div>';
+        }
+
+        if (contact.address) {
+            html += `
+                <div class="mb-3">
+                    <strong><i class="fas fa-map-marker-alt me-2"></i>Address:</strong><br>
+                    <div class="contact-item">${contact.address}</div>
+                </div>
+            `;
+        }
+
+        if (!contact.emails?.length && !contact.phone_numbers?.length && !contact.address) {
+            html += '<p class="text-muted">No contact information found</p>';
+        }
+
+        html += '</div></div>';
+
+        // Important Links
+        const links = data.important_links;
+        const linkItems = [
+            { key: 'order_tracking', label: 'Order Tracking', icon: 'fas fa-truck' },
+            { key: 'contact_us', label: 'Contact Us', icon: 'fas fa-envelope' },
+            { key: 'blogs', label: 'Blog', icon: 'fas fa-blog' },
+            { key: 'size_guide', label: 'Size Guide', icon: 'fas fa-ruler' },
+            { key: 'shipping_info', label: 'Shipping Info', icon: 'fas fa-shipping-fast' },
+            { key: 'about_us', label: 'About Us', icon: 'fas fa-info-circle' },
+            { key: 'careers', label: 'Careers', icon: 'fas fa-briefcase' }
+        ];
+
+        const foundLinks = linkItems.filter(item => links[item.key]);
+        
+        if (foundLinks.length > 0) {
+            html += '<div class="section-divider"></div>';
+            html += '<h6><i class="fas fa-link me-2"></i>Important Links</h6>';
+            html += '<div class="row">';
+            
+            foundLinks.forEach(item => {
+                html += `
+                    <div class="col-md-6 mb-2">
+                        <div class="link-item">
+                            <i class="${item.icon} me-2"></i>
+                            <a href="${links[item.key]}" target="_blank">${item.label}</a>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+        }
+
+        container.innerHTML = html;
+    }
+
+    populatePoliciesFaqs(data) {
+        const container = document.getElementById('policiesFaqsSection');
+        const policies = data.policies;
+        const faqs = data.faqs;
+        
+        let html = '<div class="row">';
+
+        // Policies
+        html += '<div class="col-md-6">';
+        html += '<h6><i class="fas fa-file-contract me-2"></i>Policies</h6>';
+        
+        const policyItems = [
+            { key: 'privacy_policy_url', label: 'Privacy Policy' },
+            { key: 'return_policy_url', label: 'Return Policy' },
+            { key: 'refund_policy_url', label: 'Refund Policy' },
+            { key: 'terms_of_service_url', label: 'Terms of Service' }
+        ];
+
+        const foundPolicies = policyItems.filter(item => policies[item.key]);
+        
+        if (foundPolicies.length > 0) {
+            foundPolicies.forEach(item => {
+                html += `
+                    <div class="mb-2">
+                        <i class="fas fa-file-alt me-2"></i>
+                        <a href="${policies[item.key]}" target="_blank" class="policy-link">${item.label}</a>
+                    </div>
+                `;
+            });
+        } else {
+            html += '<p class="text-muted">No policy links found</p>';
+        }
+        
+        html += '</div>';
+
+        // FAQs
+        html += '<div class="col-md-6">';
+        html += '<h6><i class="fas fa-question-circle me-2"></i>FAQs</h6>';
+        
+        if (faqs && faqs.length > 0) {
+            html += '<div style="max-height: 400px; overflow-y: auto;">';
+            faqs.slice(0, 5).forEach((faq, index) => {
+                html += `
+                    <div class="faq-item">
+                        <div class="faq-question">${faq.question}</div>
+                        <div class="faq-answer">${this.truncateText(faq.answer, 150)}</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            if (faqs.length > 5) {
+                html += `<small class="text-muted">+${faqs.length - 5} more FAQs available in full dataset</small>`;
+            }
+        } else {
+            html += '<p class="text-muted">No FAQs found</p>';
+        }
+        
+        html += '</div></div>';
+
+        container.innerHTML = html;
+    }
+
+    populateRawJSON(data) {
+        const container = document.getElementById('rawJson');
+        container.textContent = JSON.stringify(data, null, 2);
+    }
+
+    downloadJSON() {
+        if (!this.currentData) return;
+        
+        const dataStr = JSON.stringify(this.currentData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `shopify-insights-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    truncateText(text, maxLength) {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+    }
+}
+
+// Initialize the application when the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    new ShopifyInsightsFetcher();
+});
