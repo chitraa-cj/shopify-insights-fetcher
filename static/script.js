@@ -4,6 +4,7 @@ class ShopifyInsightsFetcher {
     constructor() {
         this.initializeEventListeners();
         this.currentData = null;
+        this.currentCurrencyMode = 'original'; // 'original' or 'usd'
     }
 
     initializeEventListeners() {
@@ -25,6 +26,11 @@ class ShopifyInsightsFetcher {
         // Download button
         document.getElementById('downloadBtn').addEventListener('click', () => {
             this.downloadJSON();
+        });
+
+        // Currency toggle button
+        document.getElementById('currencyToggle').addEventListener('click', () => {
+            this.toggleCurrency();
         });
     }
 
@@ -85,6 +91,13 @@ class ShopifyInsightsFetcher {
         document.getElementById('loadingState').classList.add('d-none');
         document.getElementById('errorState').classList.add('d-none');
         document.getElementById('initialState').classList.add('d-none');
+
+        // Show currency toggle button if there are products with pricing
+        const hasProducts = (data.hero_products && data.hero_products.length > 0) || 
+                           (data.product_catalog && data.product_catalog.length > 0);
+        if (hasProducts) {
+            document.getElementById('currencyToggle').classList.remove('d-none');
+        }
 
         // Populate sections
         this.populateBrandOverview(data);
@@ -150,12 +163,22 @@ class ShopifyInsightsFetcher {
         
         let html = '';
 
-        // Hero Products
+        // Hero Products (Products from the home page)
         if (data.hero_products && data.hero_products.length > 0) {
             html += `
-                <h6><i class="fas fa-star me-2"></i>Hero Products</h6>
-                <div class="row mb-4">
-                    ${data.hero_products.slice(0, 6).map(product => this.createProductCard(product)).join('')}
+                <div class="mb-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <h6 class="mb-0"><i class="fas fa-star text-warning me-2"></i>Hero Products</h6>
+                        <span class="badge bg-warning text-dark ms-2">Featured on Homepage</span>
+                    </div>
+                    <div class="row">
+                        ${data.hero_products.slice(0, 6).map(product => this.createProductCard(product)).join('')}
+                    </div>
+                    ${data.hero_products.length > 6 ? `
+                        <div class="text-center mt-3">
+                            <span class="badge bg-warning text-dark">+${data.hero_products.length - 6} more hero products available</span>
+                        </div>
+                    ` : ''}
                 </div>
             `;
         }
@@ -163,27 +186,55 @@ class ShopifyInsightsFetcher {
         // Sample from product catalog
         if (data.product_catalog && data.product_catalog.length > 0) {
             html += `
-                <h6><i class="fas fa-box me-2"></i>Product Catalog (Sample)</h6>
+                <div class="section-divider"></div>
+                <div class="d-flex align-items-center mb-3">
+                    <h6 class="mb-0"><i class="fas fa-box me-2"></i>Product Catalog</h6>
+                    <span class="badge bg-secondary ms-2">Sample from Full Catalog</span>
+                </div>
                 <div class="row">
                     ${data.product_catalog.slice(0, 8).map(product => this.createProductCard(product)).join('')}
                 </div>
-            `;
-
-            if (data.product_catalog.length > 8) {
-                html += `
+                ${data.product_catalog.length > 8 ? `
                     <div class="text-center mt-3">
                         <span class="badge bg-secondary">+${data.product_catalog.length - 8} more products available in full dataset</span>
                     </div>
-                `;
-            }
+                ` : ''}
+            `;
         }
 
-        container.innerHTML = html || '<p class="text-muted">No products found</p>';
+        // If no products found
+        if (!html) {
+            html = `
+                <div class="text-center py-4">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <h6 class="text-muted">No Products Found</h6>
+                    <p class="text-muted">Unable to extract product information from this store</p>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html;
     }
 
     createProductCard(product) {
         const image = product.images && product.images.length > 0 ? product.images[0] : null;
-        const price = product.price ? `$${product.price}` : 'Price not available';
+        let price = 'Price not available';
+        
+        if (product.price !== null && product.price !== undefined) {
+            if (this.currentCurrencyMode === 'original' && product.formatted_price) {
+                // Show original currency with formatting
+                price = product.formatted_price;
+            } else if (this.currentCurrencyMode === 'usd' && product.price_usd) {
+                // Show USD converted price
+                price = `$${product.price_usd.toFixed(2)} USD`;
+            } else if (product.currency_symbol && product.original_price) {
+                // Fallback to original price with symbol
+                price = `${product.currency_symbol}${product.original_price}`;
+            } else {
+                // Final fallback
+                price = `$${product.price}`;
+            }
+        }
         
         return `
             <div class="col-md-6 col-lg-4 mb-3">
@@ -199,7 +250,7 @@ class ShopifyInsightsFetcher {
                         `}
                         <div class="flex-grow-1">
                             <h6 class="mb-1">${this.truncateText(product.title, 50)}</h6>
-                            <p class="text-success mb-1 fw-bold">${price}</p>
+                            <p class="text-success mb-1 fw-bold price-display">${price}</p>
                             ${product.vendor ? `<small class="text-muted">by ${product.vendor}</small>` : ''}
                             ${product.url ? `
                                 <div class="mt-2">
@@ -516,6 +567,25 @@ class ShopifyInsightsFetcher {
     populateRawJSON(data) {
         const container = document.getElementById('rawJson');
         container.textContent = JSON.stringify(data, null, 2);
+    }
+
+    toggleCurrency() {
+        if (!this.currentData) return;
+        
+        this.currentCurrencyMode = this.currentCurrencyMode === 'original' ? 'usd' : 'original';
+        
+        // Update toggle button text
+        const toggleBtn = document.getElementById('currencyToggle');
+        if (this.currentCurrencyMode === 'original') {
+            toggleBtn.innerHTML = '<i class="fas fa-dollar-sign me-1"></i>Switch to USD';
+            toggleBtn.className = 'btn btn-outline-secondary btn-sm';
+        } else {
+            toggleBtn.innerHTML = '<i class="fas fa-globe me-1"></i>Switch to Original';
+            toggleBtn.className = 'btn btn-outline-primary btn-sm';
+        }
+        
+        // Re-render products with new currency
+        this.populateProducts(this.currentData);
     }
 
     downloadJSON() {
