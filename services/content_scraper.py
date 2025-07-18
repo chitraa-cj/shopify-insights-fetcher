@@ -75,7 +75,7 @@ class ContentScraperService:
     
     async def get_policies(self, base_url: str) -> PolicyInfo:
         """
-        Extract policy information
+        Extract policy information using intelligent extraction
         
         Args:
             base_url: The base URL of the Shopify store
@@ -88,7 +88,68 @@ class ContentScraperService:
         try:
             response = self.session.get(base_url, timeout=10)
             response.raise_for_status()
-            soup = BeautifulSoup(response.text, 'html.parser')
+            html_content = response.text
+            
+            # Try intelligent policy extraction first
+            try:
+                from services.intelligent_content_extractor import IntelligentPolicyExtractor
+                from services.base import NetworkHandler, OperationResult, ExtractionResult
+                
+                # Create network handler wrapper
+                class SessionNetworkHandler:
+                    def __init__(self, session):
+                        self.session = session
+                    
+                    def get(self, url, **kwargs):
+                        try:
+                            response = self.session.get(url, **kwargs)
+                            return OperationResult(
+                                status=ExtractionResult.SUCCESS,
+                                data=response,
+                                metadata={'status_code': response.status_code}
+                            )
+                        except Exception as e:
+                            return OperationResult(
+                                status=ExtractionResult.FAILURE,
+                                error_message=str(e)
+                            )
+                
+                network_handler = SessionNetworkHandler(self.session)
+                intelligent_extractor = IntelligentPolicyExtractor(network_handler)
+                
+                # Extract policies intelligently
+                result = await intelligent_extractor.extract_policies(base_url, html_content)
+                
+                if result.is_success and result.data:
+                    policy_content = result.data
+                    logger.info(f"Intelligent policy extraction found {len(policy_content)} policy types")
+                    
+                    # Map extracted content to policy object
+                    if 'privacy' in policy_content:
+                        policies.privacy_policy_content = policy_content['privacy'][:3000]
+                        policies.privacy_policy_url = base_url + "/policies/privacy-policy"
+                    if 'terms' in policy_content:
+                        policies.terms_of_service_content = policy_content['terms'][:3000]
+                        policies.terms_of_service_url = base_url + "/policies/terms-of-service"
+                    if 'return' in policy_content:
+                        policies.return_policy_content = policy_content['return'][:3000]
+                        policies.return_policy_url = base_url + "/policies/return-policy"
+                    if 'refund' in policy_content:
+                        policies.refund_policy_content = policy_content['refund'][:3000]
+                        policies.refund_policy_url = base_url + "/policies/refund-policy"
+                    if 'shipping' in policy_content:
+                        policies.shipping_policy_content = policy_content['shipping'][:3000]
+                        policies.shipping_policy_url = base_url + "/policies/shipping-policy"
+                    
+                    return policies
+                else:
+                    logger.warning("Intelligent policy extraction failed, falling back to traditional method")
+                    
+            except Exception as e:
+                logger.warning(f"Intelligent policy extraction error: {e}, falling back to traditional method")
+            
+            # Fallback to traditional extraction method
+            soup = BeautifulSoup(html_content, 'html.parser')
             
             # Policy mappings
             policy_mappings = {
@@ -141,7 +202,7 @@ class ContentScraperService:
     
     async def get_faqs(self, base_url: str) -> List[FAQ]:
         """
-        Extract FAQ information
+        Extract FAQ information using intelligent extraction
         
         Args:
             base_url: The base URL of the Shopify store
@@ -154,7 +215,61 @@ class ContentScraperService:
         try:
             response = self.session.get(base_url, timeout=10)
             response.raise_for_status()
-            soup = BeautifulSoup(response.text, 'html.parser')
+            html_content = response.text
+            
+            # Try intelligent FAQ extraction first
+            try:
+                from services.intelligent_content_extractor import IntelligentFAQExtractor
+                from services.base import NetworkHandler, OperationResult, ExtractionResult
+                
+                # Create network handler wrapper
+                class SessionNetworkHandler:
+                    def __init__(self, session):
+                        self.session = session
+                    
+                    def get(self, url, **kwargs):
+                        try:
+                            response = self.session.get(url, **kwargs)
+                            return OperationResult(
+                                status=ExtractionResult.SUCCESS,
+                                data=response,
+                                metadata={'status_code': response.status_code}
+                            )
+                        except Exception as e:
+                            return OperationResult(
+                                status=ExtractionResult.FAILURE,
+                                error_message=str(e)
+                            )
+                
+                network_handler = SessionNetworkHandler(self.session)
+                intelligent_extractor = IntelligentFAQExtractor(network_handler)
+                
+                # Extract FAQs intelligently
+                result = await intelligent_extractor.extract_faqs(base_url, html_content)
+                
+                if result.is_success and result.data:
+                    intelligent_faqs = result.data
+                    logger.info(f"Intelligent FAQ extraction found {len(intelligent_faqs)} FAQs")
+                    
+                    # Convert to FAQ objects
+                    for faq_data in intelligent_faqs:
+                        if isinstance(faq_data, dict) and 'question' in faq_data and 'answer' in faq_data:
+                            faq = FAQ(
+                                question=faq_data['question'],
+                                answer=faq_data['answer']
+                            )
+                            faqs.append(faq)
+                    
+                    if faqs:
+                        return faqs[:20]  # Limit to 20 FAQs
+                else:
+                    logger.warning("Intelligent FAQ extraction failed, falling back to traditional method")
+                    
+            except Exception as e:
+                logger.warning(f"Intelligent FAQ extraction error: {e}, falling back to traditional method")
+            
+            # Fallback to traditional extraction method
+            soup = BeautifulSoup(html_content, 'html.parser')
             
             # Find FAQ links
             faq_links = self._find_links_by_keywords(soup, ['faq', 'faqs', 'frequently-asked', 'help', 'support'])

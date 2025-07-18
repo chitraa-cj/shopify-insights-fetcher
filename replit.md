@@ -8,7 +8,7 @@ The Shopify Store Insights Fetcher is a Python-based web application that extrac
 
 Preferred communication style: Simple, everyday language.
 Backend preference: Python-only implementation with AI-powered validation using Gemini.
-Latest Request: Fix FAQ extraction to avoid navigation menus, add competitor analysis, and implement database persistence.
+Latest Request: Enhanced intelligent policy and FAQ extraction that automatically discovers and extracts content from privacy policies, terms of service, and segmented FAQ sections using AI reasoning for complex site navigation.
 
 ## Recent Enhancements (Latest)
 
@@ -23,6 +23,9 @@ Latest Request: Fix FAQ extraction to avoid navigation menus, add competitor ana
 - ✅ **Health Checks**: Comprehensive service health monitoring and dependency validation
 - ✅ **Rate Limiting**: Intelligent request throttling to prevent service overload
 - ✅ **URL Validation**: Robust URL parsing and normalization with edge case handling
+- ✅ **Intelligent Content Extraction**: AI-powered policy and FAQ extraction using Gemini reasoning
+- ✅ **Complex Site Navigation**: Automatically discovers content in expandable sections and help centers
+- ✅ **AI Reasoning for Content Discovery**: Uses LLM to intelligently navigate complex site structures like ColourPop's segmented FAQ sections
 
 ## System Architecture
 
