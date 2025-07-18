@@ -5,6 +5,7 @@ from pydantic import BaseModel, HttpUrl
 import logging
 import traceback
 import requests
+import os
 from services.scraper import ShopifyScraperService
 from services.database_service import DatabaseService
 from models import BrandInsights
@@ -12,6 +13,13 @@ from models import BrandInsights
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Check for Gemini API key and warn if missing
+if not os.environ.get("GEMINI_API_KEY"):
+    logger.warning("⚠️  GEMINI_API_KEY not found - AI validation features will be disabled")
+    logger.warning("   To enable AI features, provide your Gemini API key in the environment variables")
+else:
+    logger.info("✅ Gemini AI validation enabled")
 
 app = FastAPI(
     title="Shopify Store Insights Fetcher",

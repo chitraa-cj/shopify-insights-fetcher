@@ -28,15 +28,26 @@ class AIValidatorService:
     
     def __init__(self, session: requests.Session):
         self.session = session
-        try:
-            self.client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
-        except Exception as e:
-            logger.error(f"Failed to initialize Gemini client: {e}")
-            self.client = None
+        self.api_key = os.environ.get("GEMINI_API_KEY")
+        self.client = None
+        self.ai_available = False
+        
+        if self.api_key:
+            try:
+                self.client = genai.Client(api_key=self.api_key)
+                self.ai_available = True
+                logger.info("Gemini AI validation enabled")
+            except Exception as e:
+                logger.error(f"Failed to initialize Gemini client: {e}")
+                self.ai_available = False
+        else:
+            logger.warning("GEMINI_API_KEY not provided - AI validation features disabled")
+            self.ai_available = False
     
     async def validate_brand_context(self, url: str, brand_context: BrandContext, html_content: str) -> BrandContext:
         """Validate and improve brand context using AI"""
-        if not self.client:
+        if not self.ai_available:
+            logger.info("AI validation skipped - Gemini API key not available")
             return brand_context
         
         try:
@@ -88,7 +99,8 @@ class AIValidatorService:
     
     async def validate_social_handles(self, url: str, social_handles: SocialHandles, html_content: str) -> SocialHandles:
         """Validate and improve social media handles using AI"""
-        if not self.client:
+        if not self.ai_available:
+            logger.info("AI validation skipped - Gemini API key not available")
             return social_handles
         
         try:
@@ -149,7 +161,8 @@ class AIValidatorService:
     
     async def validate_contact_details(self, url: str, contact_details: ContactDetails, html_content: str) -> ContactDetails:
         """Validate and improve contact details using AI"""
-        if not self.client:
+        if not self.ai_available:
+            logger.info("AI validation skipped - Gemini API key not available")
             return contact_details
         
         try:
@@ -206,7 +219,9 @@ class AIValidatorService:
     
     async def validate_faqs(self, url: str, faqs: List[FAQ], html_content: str) -> List[FAQ]:
         """Validate and improve FAQs using AI"""
-        if not self.client or not faqs:
+        if not self.ai_available or not faqs:
+            if not self.ai_available:
+                logger.info("AI validation skipped - Gemini API key not available")
             return faqs
         
         try:
@@ -259,7 +274,8 @@ class AIValidatorService:
     
     async def validate_policies(self, url: str, policies: PolicyInfo, html_content: str) -> PolicyInfo:
         """Validate and improve policy information using AI"""
-        if not self.client:
+        if not self.ai_available:
+            logger.info("AI validation skipped - Gemini API key not available")
             return policies
         
         try:
@@ -316,8 +332,13 @@ class AIValidatorService:
     
     async def comprehensive_validation(self, url: str, insights) -> AIValidationResult:
         """Perform comprehensive AI validation of all extracted insights"""
-        if not self.client:
-            return AIValidationResult()
+        if not self.ai_available:
+            logger.info("AI comprehensive validation skipped - Gemini API key not available")
+            return AIValidationResult(
+                validated=False,
+                confidence_score=0.5,  # Neutral score when AI unavailable
+                validation_notes=["AI validation unavailable - Gemini API key not provided"]
+            )
         
         try:
             # Create a summary of all extracted data
