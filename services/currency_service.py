@@ -59,79 +59,135 @@ class CurrencyService:
         return 'USD', '$'  # Default fallback
     
     def detect_currency_from_html(self, html_content: str, url: str) -> Tuple[str, str]:
-        """Detect currency from HTML content"""
+        """Detect currency from HTML content with address-based classification"""
         try:
-            soup = BeautifulSoup(html_content, 'html.parser')
-            
-            # Check domain-based currency detection first (more reliable)
+            # Step 1: Check domain-based currency detection first (highest priority)
             domain_currency = self._detect_currency_by_domain(url)
             if domain_currency:
                 return domain_currency
             
-            # Check meta tags for currency
+            # Step 2: Address-based detection from content
+            address_currency = self._detect_currency_from_address(html_content)
+            if address_currency != 'USD':
+                logger.info(f"Address-based currency detection: {address_currency}")
+                return address_currency, self._get_symbol_for_code(address_currency)
+            
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Step 3: Check meta tags for currency
             meta_currency = soup.find('meta', {'name': 'currency'})
             if meta_currency and meta_currency.get('content'):
                 currency_code = meta_currency['content'].upper()
-                if currency_code in self.currency_symbols.values():
+                if currency_code in self.currency_symbols:
                     symbol = self._get_symbol_for_code(currency_code)
                     return currency_code, symbol
             
-            # Enhanced currency detection in text content
+            # Step 4: Enhanced currency detection in text content with INR priority
             text_content = html_content.lower()
             
-            # Look for specific currency patterns with priority
+            # Look for specific currency patterns with priority for INR
             currency_patterns = [
-                ('INR', '₹', ['inr', '₹', 'rupee', 'rs.', 'rs ', 'indian rupee', '&#8377;']),
+                ('INR', '₹', ['inr', '₹', 'rupee', 'rs.', 'rs ', 'indian rupee', '&#8377;', 'rupees']),
                 ('GBP', '£', ['gbp', '£', 'pound', 'british pound', '&#163;']),
                 ('EUR', '€', ['eur', '€', 'euro', '&#8364;']),
                 ('CAD', 'C$', ['cad', 'canadian dollar', 'ca$', 'c$']),
                 ('AUD', 'A$', ['aud', 'australian dollar', 'au$', 'a$']),
-                ('USD', '$', ['usd', '$', 'dollar', 'us dollar'])
+                ('USD', '$', ['usd', '$', 'dollar', 'us dollar'])  # USD has lowest priority
             ]
             
             for code, symbol, patterns in currency_patterns:
                 if any(pattern in text_content for pattern in patterns):
-                    logger.info(f"Detected currency from HTML for {url}: {code} ({symbol})")
+                    logger.info(f"Detected currency from HTML content for {url}: {code} ({symbol})")
                     return code, symbol
             
-            # Check for currency in price elements as fallback
+            # Step 5: Check for currency in price elements as fallback
             price_elements = soup.find_all(['span', 'div', 'p'], class_=re.compile(r'price|cost|amount'))
             for element in price_elements[:10]:  # Check first 10 price elements
                 text = element.get_text()
-                for symbol, code in self.currency_symbols.items():
+                for currency_code, symbol in self.currency_symbols.items():
                     if symbol in text:
-                        return code, symbol
+                        return currency_code, symbol
+            
+            # Step 6: Default to INR for Indian-looking sites, USD otherwise
+            if any(indicator in url.lower() for indicator in ['.in', 'india', 'mumbai', 'delhi']):
+                logger.info(f"Defaulting to INR for Indian-looking site: {url}")
+                return 'INR', '₹'
             
         except Exception as e:
             logger.error(f"Error detecting currency from HTML: {e}")
         
-        return 'USD', '$'  # Default fallback
+        return 'USD', '$'  # Final fallback
     
     def _detect_currency_by_domain(self, url: str) -> Optional[Tuple[str, str]]:
-        """Detect currency based on domain/country"""
+        """Detect currency based on domain/country with priority for Indian domains"""
         domain_mappings = {
             '.in': ('INR', '₹'),
+            '.co.in': ('INR', '₹'),
             '.uk': ('GBP', '£'),
+            '.co.uk': ('GBP', '£'),
             '.de': ('EUR', '€'),
             '.fr': ('EUR', '€'),
             '.ca': ('CAD', 'C$'),
             '.au': ('AUD', 'A$'),
+            '.com.au': ('AUD', 'A$'),
             '.jp': ('JPY', '¥'),
             '.kr': ('KRW', '₩'),
             '.br': ('BRL', 'R$'),
             '.ru': ('RUB', '₽'),
         }
         
+        url_lower = url.lower()
+        
+        # Check for Indian domains first (highest priority)
+        if '.in' in url_lower or 'india' in url_lower:
+            logger.info(f"Detected Indian domain for {url}, defaulting to INR")
+            return 'INR', '₹'
+        
+        # Check other domain patterns
         for domain_suffix, (code, symbol) in domain_mappings.items():
-            if domain_suffix in url.lower():
+            if domain_suffix in url_lower:
+                logger.info(f"Detected domain currency for {url}: {code}")
                 return code, symbol
         
         return None
     
+    def _detect_currency_from_address(self, html_content: str) -> str:
+        """Detect currency from address information in HTML content"""
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Look for address information in footer, contact sections, etc.
+            address_sections = soup.find_all(['address', 'footer', 'div'], 
+                                           class_=re.compile(r'address|contact|footer|location', re.I))
+            
+            address_text = ' '.join([section.get_text().lower() for section in address_sections])
+            
+            # Address-based currency patterns with priority for India
+            address_patterns = {
+                'india': 'INR',
+                'mumbai': 'INR', 'delhi': 'INR', 'bangalore': 'INR', 'chennai': 'INR',
+                'hyderabad': 'INR', 'pune': 'INR', 'kolkata': 'INR', 'gurgaon': 'INR',
+                'noida': 'INR', 'ahmedabad': 'INR', 'jaipur': 'INR',
+                'united kingdom': 'GBP', 'uk': 'GBP', 'london': 'GBP',
+                'canada': 'CAD', 'toronto': 'CAD', 'vancouver': 'CAD',
+                'australia': 'AUD', 'sydney': 'AUD', 'melbourne': 'AUD',
+                'japan': 'JPY', 'tokyo': 'JPY', 'osaka': 'JPY'
+            }
+            
+            for location, currency in address_patterns.items():
+                if location in address_text:
+                    logger.info(f"Address-based currency detection found: {location} -> {currency}")
+                    return currency
+            
+            return 'USD'  # Default fallback
+            
+        except Exception as e:
+            logger.warning(f"Error in address-based currency detection: {e}")
+            return 'USD'
+    
     def _get_symbol_for_code(self, currency_code: str) -> str:
         """Get currency symbol for a currency code"""
-        code_to_symbol = {v: k for k, v in self.currency_symbols.items()}
-        return code_to_symbol.get(currency_code, currency_code)
+        return self.currency_symbols.get(currency_code, currency_code)
     
     def convert_price(self, amount: float, from_currency: str, to_currency: str = 'USD') -> Dict:
         """Convert price from one currency to another"""
@@ -195,14 +251,21 @@ class CurrencyService:
     
     def detect_and_convert_product_prices(self, products_data: list, html_content: str, url: str) -> Tuple[str, str, list]:
         """Detect currency and return formatted product data with conversions"""
-        # Detect the store's currency
-        detected_currency, currency_symbol = self.detect_currency_from_products(products_data)
+        # First priority: HTML and domain-based detection (more reliable)
+        detected_currency, currency_symbol = self.detect_currency_from_html(html_content, url)
         
-        # If not detected from products, try HTML
+        # Second priority: Product data detection (only if HTML detection returns USD)
         if detected_currency == 'USD' and currency_symbol == '$':
-            detected_currency, currency_symbol = self.detect_currency_from_html(html_content, url)
+            product_currency, product_symbol = self.detect_currency_from_products(products_data)
+            if product_currency != 'USD':
+                detected_currency, currency_symbol = product_currency, product_symbol
         
-        logger.info(f"Detected currency for {url}: {detected_currency} ({currency_symbol})")
+        # Final fallback: Default to INR for Indian sites
+        if detected_currency == 'USD' and ('.in' in url.lower() or 'india' in url.lower()):
+            detected_currency, currency_symbol = 'INR', '₹'
+            logger.info(f"Defaulting to INR for Indian site: {url}")
+        
+        logger.info(f"Final detected currency for {url}: {detected_currency} ({currency_symbol})")
         
         # Process products with currency conversion
         processed_products = []

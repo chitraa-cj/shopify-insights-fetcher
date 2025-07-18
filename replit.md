@@ -26,6 +26,9 @@ Latest Request: Enhanced intelligent policy and FAQ extraction that automaticall
 - ✅ **Intelligent Content Extraction**: AI-powered policy and FAQ extraction using Gemini reasoning
 - ✅ **Complex Site Navigation**: Automatically discovers content in expandable sections and help centers
 - ✅ **AI Reasoning for Content Discovery**: Uses LLM to intelligently navigate complex site structures like ColourPop's segmented FAQ sections
+- ✅ **Enhanced Currency Detection**: Address-based classification with priority for Indian domains (.in) defaulting to INR
+- ✅ **Policy Content Modals**: In-app policy viewing using Bootstrap modals with trafilatura content extraction
+- ✅ **Regional Currency Support**: Intelligent currency detection based on domain, address, and content analysis
 
 ## System Architecture
 
