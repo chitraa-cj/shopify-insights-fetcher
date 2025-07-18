@@ -91,6 +91,7 @@ class ShopifyInsightsFetcher {
         this.populateProducts(data);
         this.populateSocialContact(data);
         this.populatePoliciesFaqs(data);
+        this.populateAIValidation(data);
         this.populateRawJSON(data);
 
         document.getElementById('resultsContainer').classList.remove('d-none');
@@ -385,6 +386,52 @@ class ShopifyInsightsFetcher {
         html += '</div></div>';
 
         container.innerHTML = html;
+    }
+
+    populateAIValidation(data) {
+        if (!data.ai_validation || !data.ai_validation.validated) {
+            return; // Skip if no AI validation data
+        }
+
+        const container = document.getElementById('policiesFaqsSection');
+        const validation = data.ai_validation;
+        
+        // Add AI validation section at the end
+        const aiValidationHtml = `
+            <div class="section-divider"></div>
+            <h6><i class="fas fa-robot me-2"></i>AI Quality Assessment</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #17a2b8, #007bff);">
+                        <span class="stat-number">${Math.round(validation.confidence_score * 100)}%</span>
+                        <span class="stat-label">Data Quality Score</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert ${validation.confidence_score >= 0.8 ? 'alert-success' : validation.confidence_score >= 0.6 ? 'alert-warning' : 'alert-danger'}">
+                        <strong>Assessment:</strong> 
+                        ${validation.confidence_score >= 0.8 ? 'Excellent data quality' : 
+                          validation.confidence_score >= 0.6 ? 'Good with room for improvement' : 
+                          'Needs significant improvement'}
+                    </div>
+                </div>
+            </div>
+            
+            ${validation.validation_notes && validation.validation_notes.length > 0 ? `
+                <div class="mt-3">
+                    <h6><i class="fas fa-lightbulb me-2"></i>AI Insights & Recommendations</h6>
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        ${validation.validation_notes.map(note => `
+                            <div class="alert alert-info py-2 mb-2">
+                                <small><i class="fas fa-info-circle me-1"></i>${note}</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+        `;
+        
+        container.innerHTML += aiValidationHtml;
     }
 
     populateRawJSON(data) {

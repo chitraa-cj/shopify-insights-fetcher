@@ -7,6 +7,7 @@ The Shopify Store Insights Fetcher is a Python-based web application that extrac
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Backend preference: Python-only implementation with AI-powered validation using Gemini.
 
 ## System Architecture
 
@@ -40,10 +41,11 @@ The application follows a modular service-oriented architecture built with FastA
   - `ImportantLinks`: Key website navigation links
 
 ### 3. Scraping Services (`services/`)
-- **`scraper.py`**: Main orchestrator service coordinating all scraping activities
+- **`scraper.py`**: Main orchestrator service coordinating all scraping activities with AI validation
 - **`product_scraper.py`**: Specialized service for extracting product catalogs from `/products.json` endpoint
 - **`content_scraper.py`**: Service for extracting brand context, policies, and textual content
 - **`social_scraper.py`**: Service for identifying and extracting social media handles
+- **`ai_validator.py`**: AI-powered validation service using Gemini for content verification and improvement
 
 ### 4. Frontend Interface (`static/`)
 - **`index.html`**: Bootstrap-based responsive web interface
@@ -58,13 +60,19 @@ The application follows a modular service-oriented architecture built with FastA
 
 1. **User Input**: User submits Shopify store URL through web interface or API
 2. **URL Validation**: System validates and normalizes the provided URL
-3. **Parallel Scraping**: Multiple specialized scrapers work concurrently:
+3. **HTML Content Capture**: Initial page request captures HTML content for AI analysis
+4. **Parallel Scraping**: Multiple specialized scrapers work concurrently:
    - Product scraper fetches from `/products.json` endpoints
    - Content scraper extracts homepage and policy pages
    - Social scraper identifies social media presence
-4. **Data Aggregation**: Main scraper service combines results from all scrapers
-5. **Response Formation**: Structured `BrandInsights` object returned as JSON
-6. **Frontend Display**: Web interface presents data in organized, readable format
+5. **AI-Powered Validation**: Gemini AI validates each section:
+   - Analyzes extracted content quality and completeness
+   - Re-extracts data from HTML structure if validation fails
+   - Provides intelligent content improvements
+6. **Comprehensive Quality Assessment**: AI performs overall data quality analysis
+7. **Data Aggregation**: Main scraper service combines validated results
+8. **Response Formation**: Structured `BrandInsights` object with AI validation metadata returned as JSON
+9. **Frontend Display**: Web interface presents data with quality scores and AI insights
 
 ## External Dependencies
 

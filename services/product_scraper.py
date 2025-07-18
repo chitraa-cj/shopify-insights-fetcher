@@ -203,7 +203,7 @@ class ProductScraperService:
                 compare_at_price=compare_at_price,
                 vendor=product_data.get('vendor', ''),
                 product_type=product_data.get('product_type', ''),
-                tags=product_data.get('tags', []),
+                tags=self._parse_tags(product_data.get('tags', [])),
                 images=images,
                 url=product_url,
                 available=available
@@ -212,3 +212,13 @@ class ProductScraperService:
         except Exception as e:
             logger.error(f"Error parsing product JSON: {e}")
             return Product(title="Unknown Product")
+    
+    def _parse_tags(self, tags_data):
+        """Parse tags data which can be either string or list"""
+        if isinstance(tags_data, str):
+            # Split by comma and clean up
+            return [tag.strip() for tag in tags_data.split(',') if tag.strip()]
+        elif isinstance(tags_data, list):
+            return tags_data
+        else:
+            return []

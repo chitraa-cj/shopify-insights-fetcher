@@ -9,6 +9,7 @@ from models import BrandInsights, BrandContext, PolicyInfo, SocialHandles, Conta
 from services.product_scraper import ProductScraperService
 from services.content_scraper import ContentScraperService
 from services.social_scraper import SocialScraperService
+from services.ai_validator import AIValidatorService
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class ShopifyScraperService:
         self.product_scraper = ProductScraperService(self.session)
         self.content_scraper = ContentScraperService(self.session)
         self.social_scraper = SocialScraperService(self.session)
+        self.ai_validator = AIValidatorService(self.session)
     
     async def extract_all_insights(self, url: str) -> BrandInsights:
         """
@@ -39,11 +41,14 @@ class ShopifyScraperService:
             # Normalize URL
             url = self._normalize_url(url)
             
-            # Verify the website is accessible
+            # Verify the website is accessible and get HTML content for AI validation
             response = self.session.get(url, timeout=10)
             if response.status_code == 404:
                 raise ValueError("Website not found")
             response.raise_for_status()
+            
+            # Store HTML content for AI validation
+            html_content = response.text
             
             # Initialize insights object
             insights = BrandInsights(
@@ -58,11 +63,11 @@ class ShopifyScraperService:
             # Run all extraction tasks concurrently
             tasks = [
                 self._extract_products(url, insights),
-                self._extract_brand_context(url, insights),
-                self._extract_policies(url, insights),
-                self._extract_faqs(url, insights),
-                self._extract_social_handles(url, insights),
-                self._extract_contact_details(url, insights),
+                self._extract_brand_context(url, insights, html_content),
+                self._extract_policies(url, insights, html_content),
+                self._extract_faqs(url, insights, html_content),
+                self._extract_social_handles(url, insights, html_content),
+                self._extract_contact_details(url, insights, html_content),
                 self._extract_important_links(url, insights)
             ]
             
@@ -71,6 +76,14 @@ class ShopifyScraperService:
             
             # Set total products found
             insights.total_products_found = len(insights.product_catalog)
+            
+            # Perform comprehensive AI validation
+            try:
+                insights.ai_validation = await self.ai_validator.comprehensive_validation(url, insights)
+                logger.info(f"AI validation completed with confidence score: {insights.ai_validation.confidence_score}")
+            except Exception as e:
+                logger.error(f"Error in AI validation: {e}")
+                insights.errors.append(f"AI validation error: {str(e)}")
             
             return insights
             
@@ -101,42 +114,62 @@ class ShopifyScraperService:
             logger.error(f"Error extracting products: {e}")
             insights.errors.append(f"Product extraction error: {str(e)}")
     
-    async def _extract_brand_context(self, url: str, insights: BrandInsights):
-        """Extract brand context and about information"""
+    async def _extract_brand_context(self, url: str, insights: BrandInsights, html_content: str):
+        """Extract brand context and about information with AI validation"""
         try:
-            insights.brand_context = await self.content_scraper.get_brand_context(url)
+            # Extract initial brand context
+            brand_context = await self.content_scraper.get_brand_context(url)
+            
+            # Validate and improve with AI
+            insights.brand_context = await self.ai_validator.validate_brand_context(url, brand_context, html_content)
         except Exception as e:
             logger.error(f"Error extracting brand context: {e}")
             insights.errors.append(f"Brand context extraction error: {str(e)}")
     
-    async def _extract_policies(self, url: str, insights: BrandInsights):
-        """Extract policy information"""
+    async def _extract_policies(self, url: str, insights: BrandInsights, html_content: str):
+        """Extract policy information with AI validation"""
         try:
-            insights.policies = await self.content_scraper.get_policies(url)
+            # Extract initial policies
+            policies = await self.content_scraper.get_policies(url)
+            
+            # Validate and improve with AI
+            insights.policies = await self.ai_validator.validate_policies(url, policies, html_content)
         except Exception as e:
             logger.error(f"Error extracting policies: {e}")
             insights.errors.append(f"Policy extraction error: {str(e)}")
     
-    async def _extract_faqs(self, url: str, insights: BrandInsights):
-        """Extract FAQ information"""
+    async def _extract_faqs(self, url: str, insights: BrandInsights, html_content: str):
+        """Extract FAQ information with AI validation"""
         try:
-            insights.faqs = await self.content_scraper.get_faqs(url)
+            # Extract initial FAQs
+            faqs = await self.content_scraper.get_faqs(url)
+            
+            # Validate and improve with AI
+            insights.faqs = await self.ai_validator.validate_faqs(url, faqs, html_content)
         except Exception as e:
             logger.error(f"Error extracting FAQs: {e}")
             insights.errors.append(f"FAQ extraction error: {str(e)}")
     
-    async def _extract_social_handles(self, url: str, insights: BrandInsights):
-        """Extract social media handles"""
+    async def _extract_social_handles(self, url: str, insights: BrandInsights, html_content: str):
+        """Extract social media handles with AI validation"""
         try:
-            insights.social_handles = await self.social_scraper.get_social_handles(url)
+            # Extract initial social handles
+            social_handles = await self.social_scraper.get_social_handles(url)
+            
+            # Validate and improve with AI
+            insights.social_handles = await self.ai_validator.validate_social_handles(url, social_handles, html_content)
         except Exception as e:
             logger.error(f"Error extracting social handles: {e}")
             insights.errors.append(f"Social handles extraction error: {str(e)}")
     
-    async def _extract_contact_details(self, url: str, insights: BrandInsights):
-        """Extract contact details"""
+    async def _extract_contact_details(self, url: str, insights: BrandInsights, html_content: str):
+        """Extract contact details with AI validation"""
         try:
-            insights.contact_details = await self.content_scraper.get_contact_details(url)
+            # Extract initial contact details
+            contact_details = await self.content_scraper.get_contact_details(url)
+            
+            # Validate and improve with AI
+            insights.contact_details = await self.ai_validator.validate_contact_details(url, contact_details, html_content)
         except Exception as e:
             logger.error(f"Error extracting contact details: {e}")
             insights.errors.append(f"Contact details extraction error: {str(e)}")

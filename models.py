@@ -67,6 +67,12 @@ class BrandContext(BaseModel):
     mission_statement: Optional[str] = None
     brand_story: Optional[str] = None
 
+class AIValidationResult(BaseModel):
+    """Model for AI validation metadata"""
+    validated: bool = False
+    confidence_score: float = 0.0
+    validation_notes: List[str] = []
+
 class BrandInsights(BaseModel):
     """Main model containing all brand insights"""
     website_url: str
@@ -82,6 +88,7 @@ class BrandInsights(BaseModel):
     total_products_found: int = 0
     extraction_success: bool = True
     errors: List[str] = []
+    ai_validation: AIValidationResult = Field(default_factory=AIValidationResult)
 
     class Config:
         json_encoders = {
